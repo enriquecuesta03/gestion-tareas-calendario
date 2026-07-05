@@ -1,0 +1,195 @@
+/* =========================================================
+   ANTI-DESBORDAMIENTO GLOBAL MÓVIL (Dashboard)
+   ========================================================= */
+body, html {
+    overflow-x: hidden !important;
+    width: 100vw !important;
+    max-width: 100% !important;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .app-layout, .mobile-header, .main-content {
+        width: 100vw !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+    .calendar-wrapper {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .fc .fc-toolbar.fc-header-toolbar { flex-direction: column !important; gap: 12px !important; }
+    .fc .fc-toolbar-chunk { display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 5px !important; width: 100% !important; }
+    .fc .fc-button { padding: 0.4em 0.6em !important; font-size: 0.85em !important; }
+}
+
+/* =========================================================
+   SIDEBAR: ANCLAJE Y SCROLL
+   ========================================================= */
+.sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+}
+
+.sidebar-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+.sidebar-scroll-area::-webkit-scrollbar { display: none; }
+
+.sidebar-footer-fixed {
+    flex: none;
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+    padding-bottom: calc(30px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* =========================================================
+   KANBAN MÓVIL: UX TÁCTIL Y DESLIZAMIENTO
+   ========================================================= */
+.mobile-only { display: none !important; }
+.desktop-only { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.mobile-swipe-hint { display: none; }
+
+@media (max-width: 768px) {
+    .mobile-swipe-hint {
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 12px;
+        padding-left: 5px;
+        animation: pulseSwipe 2s infinite;
+    }
+
+    @keyframes pulseSwipe {
+        0% { opacity: 0.6; transform: translateX(0); }
+        50% { opacity: 1; transform: translateX(5px); }
+        100% { opacity: 0.6; transform: translateX(0); }
+    }
+
+    .desktop-only { display: none !important; }
+    .mobile-only { display: flex !important; }
+
+    .kanban-board {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 5px 20px 5px !important;
+        box-sizing: border-box !important;
+        scroll-snap-type: x mandatory !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none; 
+        gap: 15px !important;
+    }
+    .kanban-board::-webkit-scrollbar { display: none; } 
+
+    .kanban-col {
+        flex: 0 0 82vw !important;
+        min-width: 82vw !important;
+        max-width: 82vw !important;
+        scroll-snap-align: center !important;
+        box-sizing: border-box !important;
+    }
+
+    .task-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-top: 15px;
+        border-top: 1px dashed var(--border-color);
+        padding-top: 15px;
+    }
+    
+    .task-actions button {
+        width: 100% !important;
+        padding: 12px !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .task-card {
+        padding: 20px !important;
+    }
+}
+
+/* ---------------------------------------------------
+   ESTÉTICA MINIMALISTA DE LA TARJETA
+--------------------------------------------------- */
+.task-card {
+  cursor: grab;
+  padding: 20px; /* Vital para que tenga área de arrastre en PC */
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  border-radius: 8px;
+}
+
+/* Efecto hover elegante en PC */
+@media (min-width: 768px) {
+  .task-card:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    border-color: var(--text-muted);
+  }
+}
+
+/* ---------------------------------------------------
+   BOTONES: SOLO EN MÓVIL
+--------------------------------------------------- */
+/* Ocultamos la caja de los botones en pantallas grandes (PC) */
+@media (min-width: 768px) {
+  .task-actions-mobile {
+    display: none !important;
+  }
+}
+
+/* En móvil (menos de 768px) los mostramos normales */
+@media (max-width: 767px) {
+  .task-actions-mobile {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+/* ---------------------------------------------------
+   FECHAS DE VENCIMIENTO SUTILES
+--------------------------------------------------- */
+.task-date-badge {
+  display: inline-block;
+  background-color: var(--bg-body); /* Gris neutro de fondo */
+  color: var(--text-muted); /* Gris oscuro para el texto */
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Color rojo apagado solo si la tarea está caducada */
+.task-date-badge.overdue {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: var(--danger-color);
+}

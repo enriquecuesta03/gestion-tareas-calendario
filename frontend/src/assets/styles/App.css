@@ -1,0 +1,414 @@
+/* =========================================
+   VARIABLES DE TEMA (DISEÑO SAAS MODERNO Y SERIO)
+   ========================================= */
+:root {
+  --font-main: 'Inter', sans-serif;
+  --bg-body: #f9fafb;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-kanban-col: #f3f4f6;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --accent-green: #10b981;
+  --accent-green-hover: #059669;
+  --danger-color: #ef4444;
+  --sidebar-width: 260px;
+}
+
+body.dark-mode {
+  --bg-body: #111827;
+  --bg-sidebar: #1f2937;
+  --bg-card: #374151;
+  --bg-kanban-col: #1f2937;
+  --text-main: #f9fafb;
+  --text-muted: #9ca3af;
+  --border-color: #374151;
+  --accent-green: #10b981;
+  --accent-green-hover: #34d399;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================================
+   CLASE GLOBAL PARA ENCABEZADOS DE SECCIÓN
+   ========================================= */
+.section-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* =========================================
+   LAYOUT: MENÚ LATERAL (SIDEBAR)
+   ========================================= */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+  z-index: 10;
+}
+
+.sidebar-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  padding: 0 20px 30px 20px;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 15px;
+}
+
+.sidebar-nav button {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 12px 15px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-main);
+}
+
+.sidebar-nav button:hover {
+  background-color: var(--bg-body);
+  color: var(--text-main);
+}
+
+.sidebar-nav button.active {
+  background-color: rgba(16, 185, 129, 0.1); 
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px;
+  background-color: var(--bg-body);
+}
+
+/* =========================================
+   KANBAN Y TARJETAS
+   ========================================= */
+.kanban-board {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+
+.kanban-col {
+  background-color: var(--bg-kanban-col);
+  border-radius: 10px;
+  padding: 15px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.col-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 15px;
+  border: none;
+}
+
+.task-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: grab;
+}
+
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: var(--accent-green);
+}
+
+.task-title {
+  font-size: 1.1rem;
+  margin: 0 0 8px 0;
+  color: var(--text-main);
+}
+
+.task-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 15px;
+}
+
+/* Etiquetas y Botones */
+.badge-empresa {
+  background-color: var(--bg-body);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin-left: 10px;
+  font-weight: 600;
+}
+
+.btn-action {
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.btn-action:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.btn-delete {
+  border-color: var(--danger-color) !important;
+  color: var(--danger-color) !important;
+}
+
+.btn-delete:hover {
+  background-color: var(--danger-color) !important;
+  color: white !important;
+}
+
+.btn-submit, .btn-add {
+  background-color: var(--accent-green);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-submit:hover, .btn-add:hover {
+  background-color: var(--accent-green-hover);
+}
+
+/* =========================================
+   INTERRUPTOR MODO OSCURO
+   ========================================= */
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.theme-switch input { opacity: 0; width: 0; height: 0; }
+
+.theme-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--border-color);
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.theme-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; width: 18px;
+  left: 3px; bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.theme-switch input:checked + .theme-slider {
+  background-color: var(--accent-green);
+}
+
+.theme-switch input:checked + .theme-slider:before {
+  transform: translateX(20px);
+}
+
+/* =========================================
+   FULLCALENDAR ADAPTACIÓN MODERNA
+   ========================================= */
+.calendar-wrapper {
+  background-color: var(--bg-card);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-top: 30px;
+}
+
+body.dark-mode .fc {
+  --fc-page-bg-color: var(--bg-body);
+  --fc-neutral-bg-color: var(--bg-body);
+  --fc-neutral-text-color: var(--text-main);
+  --fc-border-color: var(--border-color);
+  --fc-button-text-color: var(--text-main);
+  --fc-button-bg-color: var(--bg-card);
+  --fc-button-border-color: var(--border-color);
+  --fc-button-hover-bg-color: var(--bg-body);
+  --fc-button-active-bg-color: var(--accent-green);
+  --fc-button-active-border-color: var(--accent-green);
+}
+
+.fc a { color: var(--text-main) !important; text-decoration: none; }
+
+
+/* ====================================================
+   DISEÑO RESPONSIVE (ESTILO APP NATIVA MÓVIL)
+   ==================================================== */
+
+/* Ocultar elementos móviles en versión PC */
+@media (min-width: 769px) {
+  .mobile-header { display: none !important; }
+  .fab-button { display: none !important; }
+  .close-sidebar-btn { display: none !important; }
+  .sidebar-overlay { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .app-layout { 
+    flex-direction: column !important; 
+    height: 100vh !important; 
+    overflow: hidden !important; 
+  }
+
+  /* Cabecera Móvil Fija */
+  .mobile-header { 
+    display: flex !important; 
+    justify-content: space-between !important; 
+    align-items: center !important; 
+    padding: 15px 20px !important; 
+    background-color: var(--bg-sidebar) !important; 
+    border-bottom: 1px solid var(--border-color) !important; 
+    z-index: 100 !important; 
+  }
+  .mobile-menu-btn { background: none; border: none; color: var(--text-main); font-size: 1.5rem; padding: 0; cursor: pointer; display: flex; align-items: center; }
+  .mobile-logo { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0; }
+  .mobile-logo span { color: var(--accent-green); }
+
+  /* Menú lateral flotante */
+  .sidebar { position: fixed !important; top: 0 !important; left: -100% !important; height: 100vh !important; z-index: 999 !important; transition: left 0.3s ease !important; width: 280px !important; box-shadow: 5px 0 15px rgba(0,0,0,0.2) !important; }
+  .sidebar.open { left: 0 !important; }
+  .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 998; }
+  .sidebar-overlay.open { display: block !important; }
+  .close-sidebar-btn { display: block !important; background: none; border: none; color: var(--text-muted); font-size: 2rem; cursor: pointer; }
+
+  /* Contenido principal */
+  .panel-formulario { display: none !important; }
+  .main-content { 
+    padding: 15px !important; 
+    height: calc(100vh - 65px) !important; 
+    overflow-y: auto !important; 
+    overflow-x: hidden !important; 
+  }
+
+  /* Forzamos contenedor flex general a vertical */
+  .main-content > div:first-of-type { flex-direction: column !important; width: 100% !important; }
+  .main-content > div:first-of-type > div { width: 100% !important; flex: none !important; }
+
+  /* TABLERO KANBAN (CARRUSEL SWIPE) */
+  .kanban-board { 
+    display: flex !important; 
+    flex-direction: row !important; 
+    flex-wrap: nowrap !important; 
+    overflow-x: auto !important; 
+    scroll-snap-type: x mandatory !important; 
+    -webkit-overflow-scrolling: touch !important; 
+    gap: 15px !important; 
+    padding-bottom: 20px !important;
+    margin: 0 -15px !important; 
+    padding-left: 15px !important; 
+    padding-right: 15px !important; 
+  }
+  .kanban-board::-webkit-scrollbar { display: none !important; }
+  .kanban-col { 
+    flex: 0 0 85vw !important; 
+    min-width: 85vw !important; 
+    max-width: 85vw !important; 
+    scroll-snap-align: center !important; 
+  }
+
+  /* BOTÓN FLOTANTE ESTILO PÍLDORA */
+  .fab-button { 
+    display: flex !important; 
+    position: fixed !important; 
+    bottom: 25px !important; 
+    right: 20px !important; 
+    height: 52px !important; 
+    width: auto !important;
+    max-width: none !important;
+    padding: 0 20px !important; 
+    border-radius: 26px !important; 
+    background: linear-gradient(135deg, var(--accent-green), #059669) !important; 
+    color: white !important; 
+    border: none !important; 
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important; 
+    align-items: center !important; 
+    gap: 8px !important; 
+    font-weight: 600 !important; 
+    font-size: 1rem !important; 
+    z-index: 900 !important; 
+    cursor: pointer !important; 
+  }
+}
