@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 
+// IMPORTAMOS TUS CEREBROS MODULARES
+import { useTareas } from '../hooks/useTareas';
+import { useKoraAI } from '../hooks/useKoraAI';
+
 function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
 
@@ -31,6 +35,24 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
   // Variable de entorno para Producción / Local
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
+
+  // ==========================================
+  // INYECCIÓN DE IA Y ALERTAS (USANDO TUS HOOKS)
+  // ==========================================
+  const { tareas } = useTareas(token, onLogout);
+  
+  const { hablando, procesando, reproducirResumen } = useKoraAI({
+      token, 
+      nombreUsuario, 
+      tareas, 
+      formulariosActions: {} // No necesitamos las funciones de dictado en el Perfil
+  });
+
+  const notificacionesPendientes = tareas.filter(tarea => {
+      if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
+      return Date.now() >= new Date(tarea.fecha_notificacion).getTime();
+  });
+  // ==========================================
 
   const cargarMisGrupos = () => {
     fetch(`${API_URL}/api/grupos`, { headers: { 'Authorization': `Bearer ${token}` }})
@@ -124,7 +146,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
     <div className="app-layout">
       
       <style>{`
-        /* Botones del menú por defecto (PC) */
         .perfil-tab-btn {
           background: transparent; border: none; text-align: left; padding: 12px 16px;
           border-radius: 8px; color: var(--text-muted); font-weight: 500;
@@ -134,11 +155,9 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         .perfil-tab-btn:hover { background-color: var(--bg-body); color: var(--text-main); }
         .perfil-tab-btn.active { background-color: var(--bg-card); color: var(--text-main); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-        /* Animación fluida al cambiar de pestaña */
         .fade-in-section { animation: fadeInPerfil 0.3s ease-out forwards; }
         @keyframes fadeInPerfil { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Tarjetas nativas */
         .native-card {
           background-color: var(--bg-card);
           border-radius: 16px;
@@ -150,7 +169,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
           box-sizing: border-box;
         }
 
-        /* Inputs nativos */
         .native-input {
           width: 100%; height: 48px; padding: 0 15px; border-radius: 12px;
           border: 1px solid var(--border-color); background-color: var(--bg-body);
@@ -166,14 +184,10 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
         .native-btn:hover { background-color: var(--accent-green-hover); }
 
-        /* =========================================
-           CORRECCIÓN DEFINITIVA DE DESBORDAMIENTO (CARRUSEL MÓVIL)
-           ========================================= */
         @media (max-width: 768px) {
           .main-content { overflow-x: hidden !important; width: 100vw !important; padding: 15px !important; box-sizing: border-box !important; }
           .contenedor-perfil { flex-direction: column !important; gap: 15px !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
           
-          /* Menú estrictamente contenido en la pantalla */
           .menu-perfil-movil {
             display: flex !important;
             flex-direction: row !important; 
@@ -189,15 +203,11 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
           }
           .menu-perfil-movil::-webkit-scrollbar { display: none; }
           
-          /* Espaciador fantasma para que el último botón "Empresas" no se pegue al borde derecho al deslizar a tope */
-          .menu-perfil-movil::after {
-            content: '';
-            flex: 0 0 5px;
-          }
+          .menu-perfil-movil::after { content: ''; flex: 0 0 5px; }
           
           .perfil-tab-btn {
             flex: 0 0 auto !important; 
-            white-space: nowrap !important; /* Fuerza a que el texto del botón no se aplaste en 2 líneas */
+            white-space: nowrap !important;
             text-align: center !important; 
             border-radius: 24px !important;
             padding: 10px 20px !important; 
@@ -215,14 +225,28 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
       `}</style>
 
+      {/* AQUÍ LE PASAMOS LOS DATOS REALES AL SIDEBAR */}
       <Sidebar 
+          vistaActiva={'perfil'} 
+          setVistaActiva={(vista) => {
+              // Ahora navega limpiamente a Dashboard pasando la pestaña
+              navigate('/dashboard', { state: { vistaDeseada: vista } }); 
+          }}
           onVerPerfil={() => {}} 
-          reproducirResumen={() => alert("El resumen neural se ejecuta desde el tablero principal")}
-          procesando={false} hablando={false} notificacionesPendientes={[]} 
-          onVerNotificacion={() => {}} filtroVista={'todas'} setFiltroVista={() => {}} 
-          misGrupos={misGrupos} temaOscuro={temaOscuro} setTemaOscuro={setTemaOscuro}
-          nombreUsuario={nombreUsuario} onLogout={onLogout}
-          menuAbierto={menuAbierto} setMenuAbierto={setMenuAbierto}
+          reproducirResumen={reproducirResumen}
+          procesando={procesando} 
+          hablando={hablando} 
+          notificacionesPendientes={notificacionesPendientes} 
+          onVerNotificacion={() => navigate('/dashboard')} 
+          filtroVista={'todas'} 
+          setFiltroVista={() => {}} 
+          misGrupos={misGrupos} 
+          temaOscuro={temaOscuro} 
+          setTemaOscuro={setTemaOscuro}
+          nombreUsuario={nombreUsuario} 
+          onLogout={onLogout}
+          menuAbierto={menuAbierto} 
+          setMenuAbierto={setMenuAbierto}
       />
 
       <header className="mobile-header">
@@ -246,7 +270,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
           <div className="contenedor-perfil" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap', width: '100%' }}>
             
-            {/* MENÚ DE SECCIONES MÓVIL (Con Swipe perfecto sin desbordar la pantalla) */}
             <div className="menu-perfil-movil" style={{ flex: '1', minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               
               <button onClick={() => {setVistaActiva('info'); setMensaje({texto:'', tipo:''})}} className={`perfil-tab-btn ${vistaActiva === 'info' ? 'active' : ''}`}>
