@@ -4,7 +4,9 @@ import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 const GOOGLE_CLIENT_ID = '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com';
 const GITHUB_CLIENT_ID = 'Ov23liHuJKItfZMT9Qks';
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.54:3000';
+
+// Variable de entorno para Producción / Local
+const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
 function Login({ onLogin }) {
   const navigate = useNavigate();

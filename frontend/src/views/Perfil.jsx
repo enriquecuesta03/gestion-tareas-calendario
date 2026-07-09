@@ -29,13 +29,16 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const [vacacionInicio, setVacacionInicio] = useState('');
   const [vacacionFin, setVacacionFin] = useState('');
 
+  // Variable de entorno para Producción / Local
+  const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
+
   const cargarMisGrupos = () => {
-    fetch('http://192.168.1.54:3000/api/grupos', { headers: { 'Authorization': `Bearer ${token}` }})
+    fetch(`${API_URL}/api/grupos`, { headers: { 'Authorization': `Bearer ${token}` }})
     .then(res => res.json()).then(data => setMisGrupos(Array.isArray(data) ? data : []));
   };
 
   useEffect(() => {
-    fetch('http://192.168.1.54:3000/api/perfil', { headers: { 'Authorization': `Bearer ${token}` }})
+    fetch(`${API_URL}/api/perfil`, { headers: { 'Authorization': `Bearer ${token}` }})
     .then(res => res.json())
     .then(data => {
       setDatosUsuario(data); setEditNombre(data.nombre); setEditEmail(data.email); setEditFechaNac(data.fecha_nac_limpia); setCargando(false);
@@ -45,7 +48,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
   const manejarActualizarPerfil = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
-    fetch('http://192.168.1.54:3000/api/perfil', {
+    fetch(`${API_URL}/api/perfil`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ nombre: editNombre, email: editEmail, fecha_nacimiento: editFechaNac })
     }).then(res => res.json().then(data => ({ status: res.status, body: data })))
@@ -64,7 +67,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const manejarCambioPassword = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
     if (nuevaPassword !== confirmarPassword) return setMensaje({ texto: 'Las contraseñas no coinciden', tipo: 'error' });
-    fetch('http://192.168.1.54:3000/api/cambiar-password', {
+    fetch(`${API_URL}/api/cambiar-password`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ passwordActual, nuevaPassword })
     }).then(res => res.json().then(data => ({ status: res.status, body: data })))
@@ -78,7 +81,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
   const manejarCrearGrupo = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
-    fetch('http://192.168.1.54:3000/api/grupos', {
+    fetch(`${API_URL}/api/grupos`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ nombre: nombreNuevoGrupo })
     }).then(res => res.json().then(data => ({ status: res.status, body: data }))).then(({ status, body }) => {
       if (status === 200) { setMensaje({ texto: `Empresa creada. Código: ${body.codigo}`, tipo: 'exito' }); setNombreNuevoGrupo(''); cargarMisGrupos(); } 
@@ -88,7 +91,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
   const manejarUnirseGrupo = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
-    fetch('http://192.168.1.54:3000/api/grupos/unirse', {
+    fetch(`${API_URL}/api/grupos/unirse`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ codigo: codigoInvitacion })
     }).then(res => res.json().then(data => ({ status: res.status, body: data }))).then(({ status, body }) => {
       if (status === 200) { setMensaje({ texto: body.mensaje, tipo: 'exito' }); setCodigoInvitacion(''); cargarMisGrupos(); } 
@@ -100,7 +103,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       e.preventDefault(); setMensaje({ texto: '', tipo: '' });
       if (vacacionFin < vacacionInicio) return setMensaje({ texto: 'La fecha de fin no puede ser anterior a la de inicio', tipo: 'error' });
 
-      fetch('http://192.168.1.54:3000/api/vacaciones', {
+      fetch(`${API_URL}/api/vacaciones`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ grupo_id: vacacionGrupoId, fecha_inicio: vacacionInicio, fecha_fin: vacacionFin })
@@ -213,10 +216,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       `}</style>
 
       <Sidebar 
-          vistaActiva={'perfil'} 
-          setVistaActiva={(vista) => {
-              navigate('/dashboard', { state: { vista: vista } }); 
-          }}
           onVerPerfil={() => {}} 
           reproducirResumen={() => alert("El resumen neural se ejecuta desde el tablero principal")}
           procesando={false} hablando={false} notificacionesPendientes={[]} 
@@ -423,7 +422,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                             </button>
                         </form>
                     </div>
-
                   </div>
                 )}
             </div>

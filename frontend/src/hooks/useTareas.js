@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.54:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
 export function useTareas(token, onLogout) {
     // 1. ESTADOS DE DATOS PRINCIPALES
