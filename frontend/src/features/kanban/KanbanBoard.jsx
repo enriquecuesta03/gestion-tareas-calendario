@@ -17,9 +17,9 @@ function KanbanBoard({
     cargarComentarios 
 }) {
 
-    // ESTADO PARA CONTROLAR EL BOTÓN DE "MOSTRAR MÁS"
+    // ESTADO PARA CONTROLAR EL BOTÓN "VER MÁS"
     const [mostrarTodasCompletadas, setMostrarTodasCompletadas] = useState(false);
-    const LIMITE_COMPLETADAS = 6;
+    const LIMITE_COMPLETADAS = 4; // Límite de 4 tareas como pediste
 
     const renderizarFecha = (fechaIso, estado) => {
         if (!fechaIso) {
@@ -168,7 +168,7 @@ function KanbanBoard({
                 )}
               </div>
 
-              {/* ================= COLUMNA COMPLETADO CON BOTÓN "MOSTRAR MÁS" ================= */}
+              {/* ================= COLUMNA COMPLETADO ================= */}
               <div className="kanban-col done" 
                    style={{ 
                        border: columnaDestino === 'Completado' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -176,7 +176,8 @@ function KanbanBoard({
                        transition: 'all 0.2s',
                        display: 'flex', 
                        flexDirection: 'column', 
-                       maxHeight: '75vh' 
+                       // Solo aplicamos maxHeight si hemos expandido para que aparezca el scroll
+                       maxHeight: mostrarTodasCompletadas ? '75vh' : 'auto'
                    }}
                    onDragOver={(e) => { e.preventDefault(); setColumnaDestino('Completado'); }} 
                    onDragLeave={() => setColumnaDestino(null)}
@@ -187,7 +188,16 @@ function KanbanBoard({
                     <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>{tareasCompletadas.length}</span>
                 </h2>
 
-                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '15px', paddingRight: '5px', paddingBottom: '10px' }}>
+                {/* Si no está expandido, ocultamos el scroll (hidden). Si se expande, lo activamos (auto) */}
+                <div style={{ 
+                    overflowY: mostrarTodasCompletadas ? 'auto' : 'hidden', 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '15px', 
+                    paddingRight: mostrarTodasCompletadas ? '5px' : '0', 
+                    paddingBottom: '10px' 
+                }}>
                     {tareasCompletadas.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -195,9 +205,9 @@ function KanbanBoard({
                         </div>
                     ) : (
                         <>
-                            {/* Filtramos el array: Si no está activo "mostrar todas", hacemos un .slice para coger solo 6 */}
+                            {/* Filtramos el array: Si no está activo "mostrar todas", hacemos un .slice para coger solo 4 */}
                             {(mostrarTodasCompletadas ? tareasCompletadas : tareasCompletadas.slice(0, LIMITE_COMPLETADAS)).map(tarea => (
-                              <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, cursor: 'pointer', flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
+                              <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
                                 <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
                                 
                                 <div style={{ fontSize: '0.8rem', marginBottom: '15px' }}>
@@ -223,7 +233,7 @@ function KanbanBoard({
                               </div>
                             ))}
 
-                            {/* EL BOTÓN MÁGICO: Solo aparece si hay más tareas de las que marca el límite */}
+                            {/* EL BOTÓN MÁGICO: Solo aparece si hay más de 4 tareas */}
                             {tareasCompletadas.length > LIMITE_COMPLETADAS && (
                                 <button 
                                     onClick={() => setMostrarTodasCompletadas(!mostrarTodasCompletadas)}
@@ -237,8 +247,8 @@ function KanbanBoard({
                                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                                 >
                                     {mostrarTodasCompletadas 
-                                        ? "↑ Mostrar menos" 
-                                        : `↓ Pulsa para ver ${tareasCompletadas.length - LIMITE_COMPLETADAS} tareas más`
+                                        ? "↑ Ocultar tareas" 
+                                        : `↓ Pulsa para mostrar más (hay ${tareasCompletadas.length - LIMITE_COMPLETADAS} más)`
                                     }
                                 </button>
                             )}
