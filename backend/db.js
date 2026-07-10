@@ -1,19 +1,19 @@
 const mysql = require('mysql2');
-require('dotenv').config();
 
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || '127.0.0.1',
+const connection = mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'gestion_tareas_db'
+    database: process.env.DB_NAME || 'kora_db',
+    port: process.env.DB_PORT || 3306
 });
 
-db.connect((err) => {
+connection.connect((err) => {
     if (err) {
         console.error('Error conectando a la base de datos:', err);
         return;
     }
-    console.log('Conectado a la base de datos MySQL con éxito.');
+    console.log('Conectado a la base de datos MySQL');
 });
 
-module.exports = db; // Exportamos la conexión para usarla en otros archivos
+module.exports = connection;
