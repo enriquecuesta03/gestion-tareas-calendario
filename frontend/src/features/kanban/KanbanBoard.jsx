@@ -49,6 +49,7 @@ function KanbanBoard({
 
             <div className="kanban-board" style={{ marginTop: 0 }}>
                   
+              {/* ================= COLUMNA POR HACER ================= */}
               <div className="kanban-col todo" 
                    style={{ 
                        border: columnaDestino === 'Por Hacer' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -103,6 +104,7 @@ function KanbanBoard({
                 )}
               </div>
               
+              {/* ================= COLUMNA EN PROGRESO ================= */}
               <div className="kanban-col progress" 
                    style={{ 
                        border: columnaDestino === 'En Progreso' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -162,54 +164,61 @@ function KanbanBoard({
                 )}
               </div>
 
+              {/* ================= COLUMNA COMPLETADO (AHORA CON SCROLL INTERNO) ================= */}
               <div className="kanban-col done" 
                    style={{ 
                        border: columnaDestino === 'Completado' ? '2px dashed var(--border-color)' : '2px solid transparent', 
                        backgroundColor: columnaDestino === 'Completado' ? 'var(--bg-body)' : 'transparent', 
-                       transition: 'all 0.2s' 
+                       transition: 'all 0.2s',
+                       display: 'flex', 
+                       flexDirection: 'column', 
+                       maxHeight: '75vh' /* Limita la altura a aprox 6 tarjetas */
                    }}
                    onDragOver={(e) => { e.preventDefault(); setColumnaDestino('Completado'); }} 
                    onDragLeave={() => setColumnaDestino(null)}
                    onDrop={(e) => manejarDrop(e, 'Completado')}
               >
-                <h2 className="col-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 className="col-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 'none' }}>
                     <span>Completado</span>
                     <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>{tareasCompletadas.length}</span>
                 </h2>
 
-                {tareasCompletadas.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                        <span style={{ fontSize: '0.9rem' }}>Esperando resolución</span>
-                    </div>
-                ) : (
-                    tareasCompletadas.map(tarea => (
-                      <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7 }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
-                        <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
-                        
-                        <div style={{ fontSize: '0.8rem', marginBottom: '15px' }}>
-                            {renderizarFecha(tarea.fecha_vencimiento, tarea.estado)}
+                {/* Contenedor interno que genera el scroll si hay muchas tarjetas */}
+                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '15px', paddingRight: '5px', paddingBottom: '10px' }}>
+                    {tareasCompletadas.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            <span style={{ fontSize: '0.9rem' }}>Esperando resolución</span>
                         </div>
+                    ) : (
+                        tareasCompletadas.map(tarea => (
+                          <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, cursor: 'pointer', flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
+                            <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
+                            
+                            <div style={{ fontSize: '0.8rem', marginBottom: '15px' }}>
+                                {renderizarFecha(tarea.fecha_vencimiento, tarea.estado)}
+                            </div>
 
-                        <div className="task-actions task-actions-mobile" style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={(e) => { e.stopPropagation(); setTareaEnVista(tarea); cargarComentarios(tarea.id); }} className="btn-action" style={{flex: 1}}>
-                              <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
-                              Detalles
-                          </button>
-                          
-                          <button onClick={(e) => { e.stopPropagation(); borrarTarea(tarea.id); }} className="btn-action btn-delete" style={{flex: 1}}>
-                              <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span>
-                              Eliminar
-                          </button>
-                          
-                          <button onClick={(e) => { e.stopPropagation(); cambiarEstado(tarea.id, 'En Progreso'); }} className="btn-action mobile-only" style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                              Devolver a "En Progreso"
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                )}
+                            <div className="task-actions task-actions-mobile" style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={(e) => { e.stopPropagation(); setTareaEnVista(tarea); cargarComentarios(tarea.id); }} className="btn-action" style={{flex: 1}}>
+                                  <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                                  Detalles
+                              </button>
+                              
+                              <button onClick={(e) => { e.stopPropagation(); borrarTarea(tarea.id); }} className="btn-action btn-delete" style={{flex: 1}}>
+                                  <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span>
+                                  Eliminar
+                              </button>
+                              
+                              <button onClick={(e) => { e.stopPropagation(); cambiarEstado(tarea.id, 'En Progreso'); }} className="btn-action mobile-only" style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                  Devolver a "En Progreso"
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                    )}
+                </div>
               </div>
             </div>
         </div>
