@@ -15,7 +15,6 @@ app.use(express.json());
 
 // Le decimos a Express que use las rutas separadas de Login y Registro
 app.use('/api', authRoutes);
-
 app.use('/api/grupos', gruposRoutes);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
@@ -43,10 +42,6 @@ const verificarToken = (req, res, next) => {
 // 1. OBTENER TAREAS
 app.get('/api/tareas', verificarToken, (req, res) => {
     const userId = req.usuario.id;
-    // La magia está en este SELECT. Pedimos:
-    // - Tareas personales (grupo_id es nulo)
-    // - Tareas de empresa que me han asignado (asignado_a = mi id)
-    // - Todas las tareas de la empresa si soy el jefe del grupo
     const query = `
         SELECT t.*, g.nombre AS nombre_grupo 
         FROM tareas t
@@ -67,10 +62,7 @@ app.post('/api/tareas', verificarToken, (req, res) => {
 
     const notificacionFinal = fecha_notificacion ? fecha_notificacion : null;
     const repeticionFinal = repeticion ? repeticion : 'ninguna';
-
-    // Si viene con un grupo_id desde React, lo guardamos. Si no, es nulo (personal).
     const grupoFinal = grupo_id ? grupo_id : null;
-    // Si no hay asignado, por defecto es para uno mismo
     const asignadoFinal = asignado_a ? asignado_a : req.usuario.id;
 
     const query = 'INSERT INTO tareas (titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion, usuario_id, grupo_id, asignado_a) VALUES (?, ?, ?, "Por Hacer", ?, ?, ?, ?, ?)';
@@ -87,7 +79,6 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
     const userId = req.usuario.id;
     const { titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion } = req.body;
 
-    // Primero miramos qué tarea es y qué rol tiene el usuario en esa empresa
     db.query('SELECT t.*, gu.rol FROM tareas t LEFT JOIN grupo_usuarios gu ON t.grupo_id = gu.grupo_id AND gu.usuario_id = ? WHERE t.id = ?', [userId, idTarea], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
 
@@ -96,9 +87,7 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
         const soyJefe = tarea.rol === 'jefe';
         const soyAsignado = tarea.asignado_a === userId;
 
-        // ¿Están intentando editar los detalles (título, fechas)?
         if (titulo) {
-            // Regla: Solo el creador (si es personal) o el jefe (si es empresa) puede editar los detalles.
             if (!esPersonal && !soyJefe) {
                 return res.status(403).json({ error: 'Solo el jefe de la empresa puede modificar los detalles de esta tarea' });
             }
@@ -112,9 +101,7 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
                 return res.json({ mensaje: 'Tarea actualizada correctamente' });
             });
         }
-        // ¿Están intentando solo mover la tarjeta de columna (estado)?
         else if (estado) {
-            // Regla: Puedes moverla si es tuya, si eres el jefe, o si eres el empleado asignado.
             if (!esPersonal && !soyJefe && !soyAsignado) {
                 return res.status(403).json({ error: 'No tienes permiso para cambiar el estado de esta tarea' });
             }
@@ -133,7 +120,6 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
     const idTarea = req.params.id;
     const userId = req.usuario.id;
 
-    // Verificamos quién eres antes de borrar
     db.query('SELECT t.*, gu.rol FROM tareas t LEFT JOIN grupo_usuarios gu ON t.grupo_id = gu.grupo_id AND gu.usuario_id = ? WHERE t.id = ?', [userId, idTarea], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
 
@@ -141,7 +127,6 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
         const esPersonal = tarea.grupo_id === null;
         const soyJefe = tarea.rol === 'jefe';
 
-        // Regla estricta: Los empleados no pueden borrar tareas.
         if (!esPersonal && !soyJefe) {
             return res.status(403).json({ error: 'Solo el jefe de la empresa puede borrar tareas del equipo' });
         }
@@ -155,73 +140,43 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 });
 
 // ==========================================
-// GEMINI CON FALLBACK DE MODELOS
+// GEMINI CON FALLBACK DE MODELOS (USANDO EL SDK OFICIAL)
 // ==========================================
 
 async function generarConFallback(prompt) {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-
     const modelos = [
         "gemini-2.5-flash",
-        "gemini-2.5-flash-lite"
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash"
     ];
 
     for (const modelo of modelos) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${geminiApiKey}`;
-
-            const respuesta = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: prompt
-                                }
-                            ]
-                        }
-                    ]
-                })
-            });
-
-            const datos = await respuesta.json();
-
-            if (respuesta.ok) {
-                console.log(`Gemini respondió usando ${modelo}`);
-                return datos.candidates[0].content.parts[0].text;
-            }
-
-            // Saturación del servicio
-            if (
-                respuesta.status === 503 ||
-                datos?.error?.status === "UNAVAILABLE"
-            ) {
-                console.warn(`${modelo} saturado. Probando siguiente modelo...`);
-
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                continue;
-            }
-
-            throw new Error(
-                datos?.error?.message || "Error desconocido de Gemini"
-            );
+            console.log(`Intentando conectar con ${modelo}...`);
+            const model = genAI.getGenerativeModel({ model: modelo });
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            
+            console.log(`¡Gemini respondió usando ${modelo}!`);
+            return response.text();
 
         } catch (error) {
             console.error(`Error con ${modelo}:`, error.message);
+            
+            // Si el error es de autenticación, cortamos de raíz
+            if (error.message.includes("API_KEY_INVALID") || error.message.includes("key")) {
+                throw new Error("LA API KEY DE GEMINI ES INVÁLIDA O NO SE ESTÁ LEYENDO CORRECTAMENTE.");
+            }
         }
     }
 
     throw new Error(
-        "Todos los modelos Gemini están temporalmente ocupados."
+        "Todos los modelos Gemini están temporalmente ocupados o la clave es errónea."
     );
 }
 
-/// ==========================================
+// ==========================================
 // RUTA PARA EXTRAER Y ACTUALIZAR TAREAS POR VOZ (NLP) BLINDADA
 // ==========================================
 app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
@@ -229,7 +184,6 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
         const { texto, estadoActual } = req.body;
         
         const hoy = new Date();
-        // Le damos el contexto humano completo para que no falle al calcular "el próximo viernes"
         const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         const fechaContexto = hoy.toLocaleDateString('es-ES', opcionesFecha);
         const fechaIsoStr = hoy.toISOString().split('T')[0];
@@ -261,7 +215,6 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
 
         const textoGenerado = await generarConFallback(prompt);
 
-        // BLINDAJE ANTI-ALUCINACIONES: Buscamos el primer '{' y el último '}'
         const match = textoGenerado.match(/\{[\s\S]*\}/);
         
         if (!match) {
@@ -269,7 +222,6 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
         }
 
         const datosExtraidos = JSON.parse(match[0]);
-
         res.json(datosExtraidos);
         
     } catch (error) {
@@ -285,7 +237,6 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
     try {
         const { tareas, nombre } = req.body;
 
-        // 1. Limpieza y preparación de datos para el LLM
         const tareasLimpias = tareas.map(t => ({
             tarea: t.titulo,
             estado: t.estado,
@@ -294,7 +245,6 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
 
         const fechaHoy = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
 
-        // 2. Prompt optimizado para la redacción del guion
         const prompt = `
         Actúa exclusivamente como Kora, un asistente personal de voz muy humano y profesional.
         Tu objetivo es leer el resumen del día para el usuario llamado ${nombre}. Hoy es ${fechaHoy}.
@@ -305,8 +255,6 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         -------------------
 
         INSTRUCCIONES DE VOZ (ESTRICTAS):
-        INSTRUCCIONES DE VOZ (ESTRICTAS):
-        INSTRUCCIONES DE VOZ (ESTRICTAS):
         1. Escribe un único párrafo de 3 a 5 frases fluidas.
         2. Usa lenguaje natural, conversacional, cercano y tutéame SIEMPRE (dirígete a mí de "tú", NUNCA de "usted").
         3. PROHIBIDO usar asteriscos, markdown, viñetas, guiones, emojis o caracteres especiales.
@@ -315,17 +263,13 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         6. PROHIBICIÓN ABSOLUTA: NO ofrezcas ayuda adicional, NO te ofrezcas a reorganizar la agenda, ni digas frases como "si lo necesitas puedo ayudarte". Limítate exclusivamente a dar los datos de las tareas y despedirte.
         `;
 
-        // 3. Llamada a Gemini para generar el guion de texto
         const textoGenerado = await generarConFallback(prompt);
-
-
         console.log("Guion generado por Gemini:", textoGenerado);
 
-        // 4. LLAMADA DIRECTA A ELEVENLABS (Síntesis de voz neural) 
         const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
-        // Usamos una voz por defecto excelente en español (ID: 21m00Tcm4TlvDq8ikWAM - Rachel)
         const voiceId = "jcjw6BGYhh9x3PXYUqlu";
         const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
+        
         const respuestaEleven = await fetch(urlEleven, {
             method: 'POST',
             headers: {
@@ -334,7 +278,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             },
             body: JSON.stringify({
                 text: textoGenerado,
-                model_id: "eleven_multilingual_v2", // El mejor modelo para español
+                model_id: "eleven_multilingual_v2",
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75
@@ -348,10 +292,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             return res.status(500).json({ error: "ElevenLabs no pudo procesar la voz." });
         }
 
-        // 5. Recibimos el audio binario (.mp3) desde ElevenLabs
         const audioBuffer = await respuestaEleven.arrayBuffer();
-
-        // Configuramos las cabeceras de Express para enviar un archivo de audio puro
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
 
@@ -398,7 +339,6 @@ app.get('/api/festivos', async (req, res) => {
 // RUTAS DE COMENTARIOS
 // ==========================================
 
-// 1. Obtener comentarios de una tarea específica
 app.get('/api/tareas/:id/comentarios', verificarToken, (req, res) => {
     const tareaId = req.params.id;
     const query = `
@@ -414,7 +354,6 @@ app.get('/api/tareas/:id/comentarios', verificarToken, (req, res) => {
     });
 });
 
-// 2. Publicar un nuevo comentario
 app.post('/api/tareas/:id/comentarios', verificarToken, (req, res) => {
     const tareaId = req.params.id;
     const { texto } = req.body;
@@ -429,7 +368,6 @@ app.post('/api/tareas/:id/comentarios', verificarToken, (req, res) => {
     });
 });
 
-// 3. Editar un comentario propio
 app.put('/api/comentarios/:id', verificarToken, (req, res) => {
     const comentarioId = req.params.id;
     const { texto } = req.body;
@@ -437,7 +375,6 @@ app.put('/api/comentarios/:id', verificarToken, (req, res) => {
 
     if (!texto || texto.trim() === '') return res.status(400).json({ error: 'El comentario no puede estar vacío' });
 
-    // Comprobar primero si el comentario es tuyo
     db.query('SELECT usuario_id FROM comentarios WHERE id = ?', [comentarioId], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Comentario no encontrado' });
 
@@ -445,7 +382,6 @@ app.put('/api/comentarios/:id', verificarToken, (req, res) => {
             return res.status(403).json({ error: 'Solo puedes editar tus propios comentarios' });
         }
 
-        // Si es tuyo, lo actualizamos
         db.query('UPDATE comentarios SET texto = ? WHERE id = ?', [texto, comentarioId], (err) => {
             if (err) return res.status(500).json({ error: 'Error al actualizar el comentario' });
             res.json({ mensaje: 'Comentario actualizado correctamente' });
@@ -457,7 +393,6 @@ app.put('/api/comentarios/:id', verificarToken, (req, res) => {
 // RUTAS DE VACACIONES Y AUSENCIAS
 // ==========================================
 
-// 1. Registrar una vacación
 app.post('/api/vacaciones', verificarToken, (req, res) => {
     const { grupo_id, fecha_inicio, fecha_fin } = req.body;
     const usuario_id = req.usuario.id;
@@ -470,10 +405,8 @@ app.post('/api/vacaciones', verificarToken, (req, res) => {
     });
 });
 
-// 2. Obtener vacaciones de mi equipo
 app.get('/api/vacaciones', verificarToken, (req, res) => {
     const usuario_id = req.usuario.id;
-    // Traemos las vacaciones de cualquier miembro que comparta grupo conmigo
     const query = `
         SELECT v.id, v.fecha_inicio, v.fecha_fin, u.nombre AS usuario_nombre, g.nombre AS grupo_nombre
         FROM vacaciones v
@@ -487,12 +420,10 @@ app.get('/api/vacaciones', verificarToken, (req, res) => {
     });
 });
 
-// 3. Eliminar una vacación propia
 app.delete('/api/vacaciones/:id', verificarToken, (req, res) => {
     const vacacionId = req.params.id;
     const usuarioId = req.usuario.id;
 
-    // Verificamos que la vacación exista y sea del usuario
     db.query('SELECT usuario_id FROM vacaciones WHERE id = ?', [vacacionId], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Vacación no encontrada' });
 
