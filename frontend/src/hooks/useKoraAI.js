@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
+// Usamos el .env si existe, o el backend de producción
 const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
 export function useKoraAI({ 
@@ -15,7 +16,7 @@ export function useKoraAI({
     const [analizandoVoz, setAnalizandoVoz] = useState(false);
     
     const audioRef = useRef(null);
-    const audioUrlRef = useRef(null); // Ref para guardar la URL del blob y poder borrarla
+    const audioUrlRef = useRef(null);
     const reconocimientoRef = useRef(null);
     const textoDictadoRef = useRef('');
 
@@ -24,7 +25,6 @@ export function useKoraAI({
         'Authorization': `Bearer ${token}` 
     });
 
-    // LIMPIEZA DE MEMORIA: Se ejecuta si el usuario cambia de página de golpe
     useEffect(() => {
         return () => {
             if (audioRef.current) {
@@ -42,7 +42,6 @@ export function useKoraAI({
 
     // 1. LÓGICA DEL DAILY BRIEFING
     const reproducirResumen = async () => {
-        // Si ya está hablando, lo paramos
         if (hablando && audioRef.current) {
             audioRef.current.pause();
             audioRef.current = null;
@@ -54,21 +53,26 @@ export function useKoraAI({
         setProcesando(true);
         try {
             const tareasPendientes = tareas.filter(t => t.estado !== 'Completado');
+            
+            console.log("🎙️ Pidiendo audio a:", `${API_URL}/api/briefing`);
+            
             const respuesta = await fetch(`${API_URL}/api/briefing`, {
                 method: 'POST', 
                 headers: headersConAuth(), 
                 body: JSON.stringify({ tareas: tareasPendientes, nombre: nombreUsuario })
             });
             
-            if (!respuesta.ok) throw new Error("No se pudo obtener el flujo de audio");
+            if (!respuesta.ok) {
+                // Sacamos el error real que escupe el servidor
+                const errorTexto = await respuesta.text();
+                throw new Error(`Código ${respuesta.status}: ${errorTexto}`);
+            }
             
             const audioBlob = await respuesta.blob();
             
-            // Limpiamos el blob anterior si existía para no saturar la RAM
             if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-            
             const audioUrl = URL.createObjectURL(audioBlob);
-            audioUrlRef.current = audioUrl; // Lo guardamos en la referencia
+            audioUrlRef.current = audioUrl; 
             
             const reproductor = new Audio(audioUrl);
             audioRef.current = reproductor;
@@ -76,7 +80,6 @@ export function useKoraAI({
             reproductor.onended = () => { 
                 setHablando(false); 
                 audioRef.current = null; 
-                // Borramos el blob de la memoria cuando termina
                 URL.revokeObjectURL(audioUrlRef.current);
                 audioUrlRef.current = null;
             };
@@ -84,8 +87,17 @@ export function useKoraAI({
             setProcesando(false);
             setHablando(true);
             await reproductor.play();
+            
         } catch (error) {
-            toast.error("Error de conexión con el servicio de voz");
+            console.error("🕵️‍♂️ DETALLE DEL ERROR DE VOZ:", error);
+            
+            if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+                toast.error("El servidor está apagado o bloqueando la conexión (CORS).");
+            } else {
+                // Mostramos el error real en el toast (limitado a 50 letras para no desbordar)
+                toast.error("Fallo del servidor: " + error.message.substring(0, 50));
+            }
+            
             setProcesando(false); 
             setHablando(false); 
             audioRef.current = null;
@@ -101,7 +113,7 @@ export function useKoraAI({
         
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            toast.error("Entrada de voz no soportada en este navegador.");
+            toast.error("Tu navegador no soporta entrada de voz (Usa Chrome/Edge).");
             return;
         }
         
@@ -129,6 +141,8 @@ export function useKoraAI({
             
             setAnalizandoVoz(true); 
             try {
+                console.log("🧠 Enviando transcripción a Kora:", textoFinal);
+                
                 const respuesta = await fetch(`${API_URL}/api/extraer-tarea`, {
                     method: 'POST', 
                     headers: headersConAuth(), 
@@ -138,7 +152,10 @@ export function useKoraAI({
                     })
                 });
                 
-                if (!respuesta.ok) throw new Error("Fallo en extracción");
+                if (!respuesta.ok) {
+                    const errorTexto = await respuesta.text();
+                    throw new Error(`Código ${respuesta.status}: ${errorTexto}`);
+                }
                 
                 const datosEstructurados = await respuesta.json();
                 
@@ -151,9 +168,10 @@ export function useKoraAI({
                     formulariosActions.manejarCambioAviso({ target: { value: datosEstructurados.opcionAviso } });
                 }
                 
-                toast.success("Datos extraídos correctamente");
+                toast.success("Mágia hecha: Datos extraídos");
             } catch (error) { 
-                toast.error("No se pudo procesar la instrucción de voz"); 
+                console.error("🕵️‍♂️ DETALLE DEL ERROR DE EXTRACCIÓN:", error);
+                toast.error("Error de IA: " + error.message.substring(0, 50)); 
             } finally { 
                 setAnalizandoVoz(false); 
             }
