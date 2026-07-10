@@ -73,7 +73,6 @@ function Sidebar({
                             Análisis y Métricas
                         </button>
                         
-                        {/* AQUÍ ESTABA EL ERROR: Ya no usamos vistaActiva, miramos la URL */}
                         <button 
                             className={isActive('/perfil') ? 'active' : ''}
                             onClick={() => { onVerPerfil(); setMenuAbierto(false); }} 
@@ -207,26 +206,28 @@ function Sidebar({
                         </div>
                     </nav>
                     
-                    <div style={{ padding: '0 20px', marginTop: '20px' }}>
-                        <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
-                            Filtro
-                        </label>
-                        <select 
-                            value={filtroVista} 
-                            onChange={(e) => { setFiltroVista(e.target.value); setMenuAbierto(false); }} 
-                            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', fontFamily: 'var(--font-main)' }}
-                        >
-                            <option value="todas">Global</option>
-                            <option value="personal">Personal</option>
-                            {misGrupos.map(g => (
-                                <option key={g.id} value={g.id}>{g.nombre}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* AQUÍ ESTÁ EL CAMBIO: El filtro desaparece si estás en el Perfil */}
+                    {!isActive('/perfil') && (
+                        <div style={{ padding: '0 20px', marginTop: '20px' }}>
+                            <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                                Filtro
+                            </label>
+                            <select 
+                                value={filtroVista} 
+                                onChange={(e) => { setFiltroVista(e.target.value); setMenuAbierto(false); }} 
+                                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', fontFamily: 'var(--font-main)' }}
+                            >
+                                <option value="todas">Global</option>
+                                <option value="personal">Personal</option>
+                                {misGrupos && misGrupos.map(g => (
+                                    <option key={g.id} value={g.id}>{g.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
                 
                 <div className="sidebar-footer-fixed">
-                    
                     <div className="theme-switch-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
                         <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Tema Oscuro</span>
                         <label className="theme-switch">

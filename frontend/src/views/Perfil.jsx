@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-
-// IMPORTAMOS TUS CEREBROS MODULARES
 import { useTareas } from '../hooks/useTareas';
 import { useKoraAI } from '../hooks/useKoraAI';
 
 function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
+
+  // Variable de entorno para Producción / Local
+  const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
   const [datosUsuario, setDatosUsuario] = useState({ nombre: '', email: '', fecha_nac_limpia: '' });
   const [cargando, setCargando] = useState(true);
@@ -33,11 +34,8 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const [vacacionInicio, setVacacionInicio] = useState('');
   const [vacacionFin, setVacacionFin] = useState('');
 
-  // Variable de entorno para Producción / Local
-  const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
-
   // ==========================================
-  // INYECCIÓN DE IA Y ALERTAS (USANDO TUS HOOKS)
+  // IA, TAREAS Y ALERTAS (USANDO TUS HOOKS)
   // ==========================================
   const { tareas } = useTareas(token, onLogout);
   
@@ -45,7 +43,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       token, 
       nombreUsuario, 
       tareas, 
-      formulariosActions: {} // No necesitamos las funciones de dictado en el Perfil
+      formulariosActions: { estadoActual: {} } 
   });
 
   const notificacionesPendientes = tareas.filter(tarea => {
@@ -225,19 +223,14 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
       `}</style>
 
-      {/* AQUÍ LE PASAMOS LOS DATOS REALES AL SIDEBAR */}
+      {/* CONECTAMOS EL SIDEBAR A LOS HOOKS DE IA Y TAREAS */}
       <Sidebar 
-          vistaActiva={'perfil'} 
-          setVistaActiva={(vista) => {
-              // Ahora navega limpiamente a Dashboard pasando la pestaña
-              navigate('/dashboard', { state: { vistaDeseada: vista } }); 
-          }}
           onVerPerfil={() => {}} 
           reproducirResumen={reproducirResumen}
           procesando={procesando} 
           hablando={hablando} 
           notificacionesPendientes={notificacionesPendientes} 
-          onVerNotificacion={() => navigate('/dashboard')} 
+          onVerNotificacion={() => navigate('/dashboard/tablero')} 
           filtroVista={'todas'} 
           setFiltroVista={() => {}} 
           misGrupos={misGrupos} 
