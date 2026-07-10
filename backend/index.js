@@ -159,8 +159,7 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    // AQUÍ ESTÁ EL ARREGLO: Blindamos la variable para que NUNCA sea undefined
-    const geminiApiKey = process.env.GEMINI_API_KEY || "AQ.Ab8RN6IVqrTFV7rcSUIS4RhZqMdySH66HV6BZsFcLmjWu1ZXnA";
+    const geminiApiKey = process.env.GEMINI_API_KEY;
 
     const modelos = [
         "gemini-2.5-flash",
