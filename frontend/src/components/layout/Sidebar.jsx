@@ -19,7 +19,8 @@ function Sidebar({
     nombreUsuario, 
     onLogout,
     menuAbierto,       
-    setMenuAbierto     
+    setMenuAbierto,
+    mostrarFiltro = true
 }) {
     const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
     const navigate = useNavigate();
@@ -206,8 +207,8 @@ function Sidebar({
                         </div>
                     </nav>
                     
-                    {/* AQUÍ ESTÁ EL CAMBIO: El filtro desaparece si estás en el Perfil */}
-                    {!isActive('/perfil') && (
+                    {/* AQUÍ ESTÁ LA CONDICIÓN FÍSICA PARA MATAR EL FILTRO */}
+                    {mostrarFiltro && (
                         <div style={{ padding: '0 20px', marginTop: '20px' }}>
                             <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
                                 Filtro

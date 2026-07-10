@@ -7,14 +7,11 @@ import { useKoraAI } from '../hooks/useKoraAI';
 function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
 
-  // Variable de entorno para Producción / Local
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
   const [datosUsuario, setDatosUsuario] = useState({ nombre: '', email: '', fecha_nac_limpia: '' });
   const [cargando, setCargando] = useState(true);
   const [vistaActiva, setVistaActiva] = useState('info'); 
-  
-  // ESTADO PARA EL MENÚ MÓVIL EN EL PERFIL
   const [menuAbierto, setMenuAbierto] = useState(false); 
   
   const [editNombre, setEditNombre] = useState('');
@@ -29,7 +26,6 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const [nombreNuevoGrupo, setNombreNuevoGrupo] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
 
-  // ESTADOS PARA VACACIONES
   const [vacacionGrupoId, setVacacionGrupoId] = useState('');
   const [vacacionInicio, setVacacionInicio] = useState('');
   const [vacacionFin, setVacacionFin] = useState('');
@@ -223,8 +219,9 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
       `}</style>
 
-      {/* CONECTAMOS EL SIDEBAR A LOS HOOKS DE IA Y TAREAS */}
+      {/* AQUÍ MATAMOS EL FILTRO: Le enviamos la prop mostrarFiltro={false} al Sidebar */}
       <Sidebar 
+          mostrarFiltro={false}
           onVerPerfil={() => {}} 
           reproducirResumen={reproducirResumen}
           procesando={procesando} 
