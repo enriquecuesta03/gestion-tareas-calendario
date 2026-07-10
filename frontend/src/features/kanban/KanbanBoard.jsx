@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 // RUTA CORREGIDA
 import '../../assets/styles/DashboardLayout.css';
@@ -16,6 +16,10 @@ function KanbanBoard({
     setTareaEnVista, 
     cargarComentarios 
 }) {
+
+    // ESTADO PARA CONTROLAR EL BOTÓN DE "MOSTRAR MÁS"
+    const [mostrarTodasCompletadas, setMostrarTodasCompletadas] = useState(false);
+    const LIMITE_COMPLETADAS = 6;
 
     const renderizarFecha = (fechaIso, estado) => {
         if (!fechaIso) {
@@ -164,7 +168,7 @@ function KanbanBoard({
                 )}
               </div>
 
-              {/* ================= COLUMNA COMPLETADO (AHORA CON SCROLL INTERNO) ================= */}
+              {/* ================= COLUMNA COMPLETADO CON BOTÓN "MOSTRAR MÁS" ================= */}
               <div className="kanban-col done" 
                    style={{ 
                        border: columnaDestino === 'Completado' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -172,7 +176,7 @@ function KanbanBoard({
                        transition: 'all 0.2s',
                        display: 'flex', 
                        flexDirection: 'column', 
-                       maxHeight: '75vh' /* Limita la altura a aprox 6 tarjetas */
+                       maxHeight: '75vh' 
                    }}
                    onDragOver={(e) => { e.preventDefault(); setColumnaDestino('Completado'); }} 
                    onDragLeave={() => setColumnaDestino(null)}
@@ -183,7 +187,6 @@ function KanbanBoard({
                     <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>{tareasCompletadas.length}</span>
                 </h2>
 
-                {/* Contenedor interno que genera el scroll si hay muchas tarjetas */}
                 <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '15px', paddingRight: '5px', paddingBottom: '10px' }}>
                     {tareasCompletadas.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -191,32 +194,55 @@ function KanbanBoard({
                             <span style={{ fontSize: '0.9rem' }}>Esperando resolución</span>
                         </div>
                     ) : (
-                        tareasCompletadas.map(tarea => (
-                          <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, cursor: 'pointer', flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
-                            <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
-                            
-                            <div style={{ fontSize: '0.8rem', marginBottom: '15px' }}>
-                                {renderizarFecha(tarea.fecha_vencimiento, tarea.estado)}
-                            </div>
+                        <>
+                            {/* Filtramos el array: Si no está activo "mostrar todas", hacemos un .slice para coger solo 6 */}
+                            {(mostrarTodasCompletadas ? tareasCompletadas : tareasCompletadas.slice(0, LIMITE_COMPLETADAS)).map(tarea => (
+                              <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, cursor: 'pointer', flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
+                                <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
+                                
+                                <div style={{ fontSize: '0.8rem', marginBottom: '15px' }}>
+                                    {renderizarFecha(tarea.fecha_vencimiento, tarea.estado)}
+                                </div>
 
-                            <div className="task-actions task-actions-mobile" style={{ display: 'flex', gap: '8px' }}>
-                              <button onClick={(e) => { e.stopPropagation(); setTareaEnVista(tarea); cargarComentarios(tarea.id); }} className="btn-action" style={{flex: 1}}>
-                                  <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
-                                  Detalles
-                              </button>
-                              
-                              <button onClick={(e) => { e.stopPropagation(); borrarTarea(tarea.id); }} className="btn-action btn-delete" style={{flex: 1}}>
-                                  <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span>
-                                  Eliminar
-                              </button>
-                              
-                              <button onClick={(e) => { e.stopPropagation(); cambiarEstado(tarea.id, 'En Progreso'); }} className="btn-action mobile-only" style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                  Devolver a "En Progreso"
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                                <div className="task-actions task-actions-mobile" style={{ display: 'flex', gap: '8px' }}>
+                                  <button onClick={(e) => { e.stopPropagation(); setTareaEnVista(tarea); cargarComentarios(tarea.id); }} className="btn-action" style={{flex: 1}}>
+                                      <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                                      Detalles
+                                  </button>
+                                  
+                                  <button onClick={(e) => { e.stopPropagation(); borrarTarea(tarea.id); }} className="btn-action btn-delete" style={{flex: 1}}>
+                                      <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span>
+                                      Eliminar
+                                  </button>
+                                  
+                                  <button onClick={(e) => { e.stopPropagation(); cambiarEstado(tarea.id, 'En Progreso'); }} className="btn-action mobile-only" style={{ backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                      Devolver a "En Progreso"
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* EL BOTÓN MÁGICO: Solo aparece si hay más tareas de las que marca el límite */}
+                            {tareasCompletadas.length > LIMITE_COMPLETADAS && (
+                                <button 
+                                    onClick={() => setMostrarTodasCompletadas(!mostrarTodasCompletadas)}
+                                    style={{ 
+                                        width: '100%', padding: '12px', marginTop: '5px', 
+                                        backgroundColor: 'transparent', border: '1px dashed var(--border-color)', 
+                                        borderRadius: '8px', color: 'var(--text-muted)', cursor: 'pointer',
+                                        fontWeight: '600', fontSize: '0.85rem', transition: 'all 0.2s', flex: 'none'
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-body)'; e.currentTarget.style.color = 'var(--text-main)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                                >
+                                    {mostrarTodasCompletadas 
+                                        ? "↑ Mostrar menos" 
+                                        : `↓ Pulsa para ver ${tareasCompletadas.length - LIMITE_COMPLETADAS} tareas más`
+                                    }
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
               </div>
