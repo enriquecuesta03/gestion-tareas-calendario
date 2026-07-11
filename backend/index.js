@@ -162,37 +162,45 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    // Cogemos tu clave AQ. directamente de las variables de Render
-    const geminiApiKey = process.env.GEMINI_API_KEY; 
-    
-    // Inicializamos el SDK oficial de Google (que ya tenías importado arriba)
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    // 1. Limpiamos la clave por si Render le ha metido comillas o espacios invisibles
+    const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
 
     const modelos = [
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
-        "gemini-1.5-flash" // Añadimos este por si los otros están saturados
+        "gemini-1.5-flash"
     ];
 
     for (const modelo of modelos) {
         try {
-            // Usamos el método oficial en lugar del fetch manual
-            const model = genAI.getGenerativeModel({ model: modelo });
-            
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            
-            console.log(`✅ Gemini respondió usando el modelo: ${modelo}`);
-            return response.text();
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
+            const respuesta = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 2. FORZAMOS a Google a leerlo como API Key usando esta cabecera oficial
+                    'x-goog-api-key': geminiApiKey 
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            const datos = await respuesta.json();
+
+            if (respuesta.ok) {
+                console.log(`✅ Gemini respondió perfectamente usando ${modelo}`);
+                return datos.candidates[0].content.parts[0].text;
+            }
+
+            console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
         } catch (error) {
-            console.error(`🕵️‍♂️ Error con ${modelo}:`, error.message);
+            console.error(`🕵️‍♂️ Error crítico de conexión con ${modelo}:`, error.message);
         }
     }
 
-    throw new Error(
-        "Todos los modelos Gemini están temporalmente ocupados."
-    );
+    throw new Error("Todos los modelos Gemini están temporalmente ocupados.");
 }
 
 /// ==========================================
