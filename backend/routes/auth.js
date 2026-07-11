@@ -30,7 +30,6 @@ router.post('/registro', async (req, res) => {
                 if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'El email ya esta registrado' });
                 return res.status(500).json({ error: 'Error al registrar usuario' });
             }
-            // Registro limpio, sin tareas falsas
             res.json({ mensaje: 'Usuario registrado con exito' });
         });
     } catch (error) {
@@ -41,7 +40,8 @@ router.post('/registro', async (req, res) => {
 router.post('/login', (req, res) => {
     const { email, password } = req.body;
 
-    db.query('SELECT *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE email = ?', [email], async (err, resultados) => {
+    // ARREGLO: Uso de backticks (`) y comillas simples (') para la fecha
+    db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
         if (err) {
             console.error("🕵️‍♂️ ERROR SQL EN LOGIN:", err);
             return res.status(500).json({ error: 'Error en la base de datos' });
@@ -55,9 +55,7 @@ router.post('/login', (req, res) => {
         
         const passCorrecta = await bcrypt.compare(password, usuario.password);
         if (!passCorrecta) {
-            // AQUÍ ESTÁ EL CHIVATO ESTRELLA
             console.log(`🕵️‍♂️ FALLO LOGIN: Contraseña incorrecta para ${email}.`);
-            console.log(`🕵️‍♂️ LONGITUD DE LA CONTRASEÑA EN BD: ${usuario.password.length} caracteres (¡Bcrypt exige 60!)`);
             return res.status(401).json({ error: 'Email o contrasena incorrectos' });
         }
 
@@ -83,7 +81,8 @@ router.post('/google', async (req, res) => {
         const email = payload.email;
         const nombre = payload.name;
 
-        db.query('SELECT *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE email = ?', [email], async (err, resultados) => {
+        // ARREGLO: Uso de backticks (`) y comillas simples (')
+        db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
 
             if (resultados.length > 0) {
@@ -141,7 +140,8 @@ router.post('/github', async (req, res) => {
         const email = primaryEmailObj.email;
         const nombre = userData.name || userData.login;
 
-        db.query('SELECT *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE email = ?', [email], async (err, resultados) => {
+        // ARREGLO: Uso de backticks (`) y comillas simples (')
+        db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
 
             if (resultados.length > 0) {
@@ -232,7 +232,9 @@ router.get('/perfil', (req, res) => {
 
     try {
         const verificado = jwt.verify(token, JWT_SECRET);
-        db.query('SELECT nombre, email, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE id = ?', [verificado.id], (err, resultados) => {
+        
+        // ARREGLO: Uso de backticks (`) y comillas simples (')
+        db.query(`SELECT nombre, email, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE id = ?`, [verificado.id], (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
             res.json(resultados[0]);
