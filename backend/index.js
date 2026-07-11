@@ -57,7 +57,7 @@ app.get('/api/tareas', verificarToken, (req, res) => {
     `;
     db.query(query, [userId, userId, userId], (err, resultados) => {
             if (err) {
-                console.error("🕵️‍♂️ DETALLE DEL ERROR SQL:", err); // <--- Este es el chivato
+                console.error("DETALLE DEL ERROR SQL:", err);
                 return res.status(500).json({ error: 'Error al obtener las tareas' });
             }
             res.json(resultados);
@@ -162,60 +162,31 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    // Cogemos tu clave AQ. directamente de las variables de Render
+    const geminiApiKey = process.env.GEMINI_API_KEY; 
+    
+    // Inicializamos el SDK oficial de Google (que ya tenías importado arriba)
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
 
     const modelos = [
         "gemini-2.5-flash",
-        "gemini-2.5-flash-lite"
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash" // Añadimos este por si los otros están saturados
     ];
 
     for (const modelo of modelos) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${geminiApiKey}`;
-
-            const respuesta = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                {
-                                    text: prompt
-                                }
-                            ]
-                        }
-                    ]
-                })
-            });
-
-            const datos = await respuesta.json();
-
-            if (respuesta.ok) {
-                console.log(`Gemini respondió usando ${modelo}`);
-                return datos.candidates[0].content.parts[0].text;
-            }
-
-            // Saturación del servicio
-            if (
-                respuesta.status === 503 ||
-                datos?.error?.status === "UNAVAILABLE"
-            ) {
-                console.warn(`${modelo} saturado. Probando siguiente modelo...`);
-
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                continue;
-            }
-
-            throw new Error(
-                datos?.error?.message || "Error desconocido de Gemini"
-            );
+            // Usamos el método oficial en lugar del fetch manual
+            const model = genAI.getGenerativeModel({ model: modelo });
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            
+            console.log(`✅ Gemini respondió usando el modelo: ${modelo}`);
+            return response.text();
 
         } catch (error) {
-            console.error(`Error con ${modelo}:`, error.message);
+            console.error(`🕵️‍♂️ Error con ${modelo}:`, error.message);
         }
     }
 

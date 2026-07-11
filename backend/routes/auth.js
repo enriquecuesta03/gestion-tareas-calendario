@@ -55,13 +55,13 @@ router.post('/login', (req, res) => {
         
         const passCorrecta = await bcrypt.compare(password, usuario.password);
         if (!passCorrecta) {
-            console.log(`🕵️‍♂️ FALLO LOGIN: Contraseña incorrecta para ${email}.`);
+            console.log(`FALLO LOGIN: Contraseña incorrecta para ${email}.`);
             return res.status(401).json({ error: 'Email o contrasena incorrectos' });
         }
 
         const token = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
         
-        console.log(`✅ LOGIN EXITOSO: Bienvenido ${usuario.nombre}`);
+        console.log(`LOGIN EXITOSO: Bienvenido ${usuario.nombre}`);
         res.json({ 
             mensaje: 'Login exitoso', 
             token, 
