@@ -42,16 +42,28 @@ router.post('/login', (req, res) => {
     const { email, password } = req.body;
 
     db.query('SELECT *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE email = ?', [email], async (err, resultados) => {
-        if (err) return res.status(500).json({ error: 'Error en la base de datos' });
-        if (resultados.length === 0) return res.status(401).json({ error: 'Email o contrasena incorrectos' });
+        if (err) {
+            console.error("🕵️‍♂️ ERROR SQL EN LOGIN:", err);
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        if (resultados.length === 0) {
+            console.log(`🕵️‍♂️ FALLO LOGIN: El email ${email} no existe en la BD`);
+            return res.status(401).json({ error: 'Email o contrasena incorrectos' });
+        }
 
         const usuario = resultados[0];
         
         const passCorrecta = await bcrypt.compare(password, usuario.password);
-        if (!passCorrecta) return res.status(401).json({ error: 'Email o contrasena incorrectos' });
+        if (!passCorrecta) {
+            // AQUÍ ESTÁ EL CHIVATO ESTRELLA
+            console.log(`🕵️‍♂️ FALLO LOGIN: Contraseña incorrecta para ${email}.`);
+            console.log(`🕵️‍♂️ LONGITUD DE LA CONTRASEÑA EN BD: ${usuario.password.length} caracteres (¡Bcrypt exige 60!)`);
+            return res.status(401).json({ error: 'Email o contrasena incorrectos' });
+        }
 
         const token = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
         
+        console.log(`✅ LOGIN EXITOSO: Bienvenido ${usuario.nombre}`);
         res.json({ 
             mensaje: 'Login exitoso', 
             token, 
@@ -105,7 +117,6 @@ router.post('/github', async (req, res) => {
     const { code } = req.body;
 
     try {
-        // 1. Intercambiamos el código por un Access Token en GitHub
         const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -116,13 +127,11 @@ router.post('/github', async (req, res) => {
 
         if (!accessToken) return res.status(400).json({ error: 'Código de autorización de GitHub inválido' });
 
-        // 2. Pedimos los datos del perfil
         const userResponse = await fetch('https://api.github.com/user', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         const userData = await userResponse.json();
 
-        // 3. Pedimos los emails privados (GitHub oculta el email a veces)
         const emailResponse = await fetch('https://api.github.com/user/emails', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
@@ -130,19 +139,16 @@ router.post('/github', async (req, res) => {
         const primaryEmailObj = emailData.find(e => e.primary) || emailData[0];
         
         const email = primaryEmailObj.email;
-        const nombre = userData.name || userData.login; // Si no hay nombre real, usa el apodo
+        const nombre = userData.name || userData.login;
 
-        // 4. Buscamos en nuestra base de datos
         db.query('SELECT *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE email = ?', [email], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
 
             if (resultados.length > 0) {
-                // Usuario existente: entra directo
                 const usuario = resultados[0];
                 const jwtToken = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
                 return res.json({ mensaje: 'Login de GitHub exitoso', token: jwtToken, nombre: usuario.nombre, fecha_nacimiento: usuario.fecha_nac_limpia });
             } else {
-                // Usuario nuevo: pedimos fecha de nacimiento enviando un ticket temporal
                 const tempToken = jwt.sign({ email, nombre, provider: 'github' }, JWT_SECRET, { expiresIn: '15m' });
                 return res.status(206).json({ 
                     mensaje: 'Se requiere fecha de nacimiento', 
@@ -182,36 +188,31 @@ router.post('/github-complete', async (req, res) => {
         res.status(401).json({ error: 'Sesión caducada. Vuelve a iniciar sesión con GitHub.' });
     }
 });
+
 // --- RUTA PARA CAMBIAR CONTRASEÑA ---
 router.put('/cambiar-password', async (req, res) => {
-    // 1. Extraemos el token de la cabecera de la petición
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) return res.status(401).json({ error: 'Acceso denegado. No hay token.' });
 
     try {
-        // 2. Verificamos quién es el usuario
         const verificado = jwt.verify(token, JWT_SECRET);
         const usuarioId = verificado.id;
         const { passwordActual, nuevaPassword } = req.body;
 
-        // 3. Buscamos al usuario en la base de datos
         db.query('SELECT * FROM usuarios WHERE id = ?', [usuarioId], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
             const usuario = resultados[0];
 
-            // 4. Comprobamos que la contraseña actual es correcta
             const passCorrecta = await bcrypt.compare(passwordActual, usuario.password);
             if (!passCorrecta) return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
 
-            // 5. Encriptamos la nueva contraseña
             const salt = await bcrypt.genSalt(10);
             const nuevaPasswordHasheada = await bcrypt.hash(nuevaPassword, salt);
 
-            // 6. Guardamos la nueva contraseña en la base de datos
             db.query('UPDATE usuarios SET password = ? WHERE id = ?', [nuevaPasswordHasheada, usuarioId], (err, resultado) => {
                 if (err) return res.status(500).json({ error: 'Error al actualizar contraseña' });
                 res.json({ mensaje: 'Contraseña actualizada con éxito' });
@@ -222,6 +223,7 @@ router.put('/cambiar-password', async (req, res) => {
         res.status(401).json({ error: 'Token inválido o caducado' });
     }
 });
+
 // --- OBTENER DATOS DEL PERFIL ---
 router.get('/perfil', (req, res) => {
     const authHeader = req.headers['authorization'];
@@ -230,7 +232,6 @@ router.get('/perfil', (req, res) => {
 
     try {
         const verificado = jwt.verify(token, JWT_SECRET);
-        // Pedimos los datos, formateando la fecha para que el input HTML la entienda
         db.query('SELECT nombre, email, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_nac_limpia FROM usuarios WHERE id = ?', [verificado.id], (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -252,17 +253,14 @@ router.put('/perfil', async (req, res) => {
         const usuarioId = verificado.id;
         const { nombre, email, fecha_nacimiento } = req.body;
 
-        // 1. Comprobar si el nuevo email ya está siendo usado por otra persona
         db.query('SELECT id FROM usuarios WHERE email = ? AND id != ?', [email, usuarioId], (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length > 0) return res.status(400).json({ error: 'Ese email ya está registrado en otra cuenta' });
 
-            // 2. Si el email está libre, actualizamos los datos
             const queryUpdate = 'UPDATE usuarios SET nombre = ?, email = ?, fecha_nacimiento = ? WHERE id = ?';
             db.query(queryUpdate, [nombre, email, fecha_nacimiento, usuarioId], (err, resultado) => {
                 if (err) return res.status(500).json({ error: 'Error al actualizar el perfil' });
 
-                // 3. Como el JWT guarda el nombre del usuario, si se lo cambia, tenemos que generarle un token nuevo
                 const nuevoToken = jwt.sign({ id: usuarioId, nombre: nombre }, JWT_SECRET, { expiresIn: '24h' });
                 
                 res.json({ mensaje: 'Perfil actualizado', token: nuevoToken, nombre, fecha_nacimiento });
