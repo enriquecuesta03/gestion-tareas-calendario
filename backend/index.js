@@ -56,9 +56,12 @@ app.get('/api/tareas', verificarToken, (req, res) => {
            OR t.grupo_id IN (SELECT grupo_id FROM grupo_usuarios WHERE usuario_id = ? AND rol = 'jefe')
     `;
     db.query(query, [userId, userId, userId], (err, resultados) => {
-        if (err) return res.status(500).json({ error: 'Error al obtener las tareas' });
-        res.json(resultados);
-    });
+            if (err) {
+                console.error("🕵️‍♂️ DETALLE DEL ERROR SQL:", err); // <--- Este es el chivato
+                return res.status(500).json({ error: 'Error al obtener las tareas' });
+            }
+            res.json(resultados);
+        });
 });
 
 // 2. CREAR TAREA
