@@ -162,28 +162,28 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    // 1. Limpiamos la clave por si Render le ha metido comillas o espacios invisibles
-    const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
+    // 1. Tu clave limpia (ya sea desde process.env o hardcodeada para probar)
+    const geminiApiKey = (process.env.GEMINI_API_KEY || "AQ.Ab8RN6IVqrTFV7rcSUIS4RhZqMdySH66HV6BZsFcLmjWu1ZXnA").replace(/['"]/g, '').trim();
 
     const modelos = [
         "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
         "gemini-1.5-flash"
     ];
 
     for (const modelo of modelos) {
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+            // URL MODIFICADA: Apuntamos al endpoint correcto de AI Studio
+            const url = `https://aistudio.google.com/v1beta/models/${modelo}:generateContent?key=${geminiApiKey}`;
 
             const respuesta = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    // 2. FORZAMOS a Google a leerlo como API Key usando esta cabecera oficial
-                    'x-goog-api-key': geminiApiKey 
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
                 })
             });
 
@@ -196,7 +196,7 @@ async function generarConFallback(prompt) {
 
             console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
         } catch (error) {
-            console.error(`🕵️‍♂️ Error crítico de conexión con ${modelo}:`, error.message);
+            console.error(`🕵️‍♂️ Error crítico en ${modelo}:`, error.message);
         }
     }
 
