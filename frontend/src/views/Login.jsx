@@ -14,10 +14,13 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // --- NUEVO: DETECTOR DE CÓDIGO GITHUB ---
+  // --- NUEVO: DETECTOR DE CÓDIGO GITHUB CON CHIVATO ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+
+    // EL CHIVATO: Si esto sale en la consola, la caché está limpia y el código funciona
+    console.log("🕵️‍♂️ COMPROBANDO GITHUB. Código encontrado:", code);
 
     if (code) {
       // 1. Limpiamos la URL para que no quede rastro del código (estética y seguridad)
