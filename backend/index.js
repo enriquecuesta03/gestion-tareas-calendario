@@ -162,8 +162,8 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    // 1. Tu clave limpia (ya sea desde process.env o hardcodeada para probar)
-    const geminiApiKey = (process.env.GEMINI_API_KEY || "AQ.Ab8RN6IVqrTFV7rcSUIS4RhZqMdySH66HV6BZsFcLmjWu1ZXnA").replace(/['"]/g, '').trim();
+    // Limpiamos la clave por si las moscas
+    const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
 
     const modelos = [
         "gemini-2.5-flash",
@@ -172,8 +172,8 @@ async function generarConFallback(prompt) {
 
     for (const modelo of modelos) {
         try {
-            // URL MODIFICADA: Apuntamos al endpoint correcto de AI Studio
-            const url = `https://aistudio.google.com/v1beta/models/${modelo}:generateContent?key=${geminiApiKey}`;
+            // URL OFICIAL DE LA API con la clave pasada por parámetro puro
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${geminiApiKey}`;
 
             const respuesta = await fetch(url, {
                 method: 'POST',
@@ -187,16 +187,26 @@ async function generarConFallback(prompt) {
                 })
             });
 
-            const datos = await respuesta.json();
+            // Leemos la respuesta como texto crudo primero para evitar que explote
+            const textoCrudo = await respuesta.text();
 
-            if (respuesta.ok) {
-                console.log(`✅ Gemini respondió perfectamente usando ${modelo}`);
-                return datos.candidates[0].content.parts[0].text;
+            try {
+                // Intentamos convertirlo a JSON
+                const datos = JSON.parse(textoCrudo);
+
+                if (respuesta.ok) {
+                    console.log(`✅ Gemini respondió perfectamente usando ${modelo}`);
+                    return datos.candidates[0].content.parts[0].text;
+                }
+
+                console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
+            } catch (jsonError) {
+                // Si no es JSON, capturamos qué demonios nos está devolviendo Google
+                console.error(`🕵️‍♂️ El servidor no devolvió JSON en ${modelo}. Respuesta cruda:`, textoCrudo.substring(0, 200));
             }
 
-            console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
         } catch (error) {
-            console.error(`🕵️‍♂️ Error crítico en ${modelo}:`, error.message);
+            console.error(`🕵️‍♂️ Error crítico de conexión en ${modelo}:`, error.message);
         }
     }
 
