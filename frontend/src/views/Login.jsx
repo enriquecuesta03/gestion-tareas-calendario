@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
@@ -13,6 +13,38 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // --- NUEVO: DETECTOR DE CÓDIGO GITHUB ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      // 1. Limpiamos la URL para que no quede rastro del código (estética y seguridad)
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // 2. Enviamos el código a Render
+      fetch(`${API_URL}/api/github`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      })
+      .then(res => res.json().then(data => ({ status: res.status, body: data })))
+      .then(({ status, body }) => {
+        if (status === 200) {
+          // Login perfecto
+          onLogin(body);
+        } else if (status === 206) {
+          // Si el usuario es nuevo y le falta la fecha
+          setError('Registro parcial: Falta tu fecha de nacimiento.');
+        } else {
+          setError(body.error || 'Error al iniciar sesión con GitHub');
+        }
+      })
+      .catch(() => setError('Error de conexión al verificar GitHub'));
+    }
+  }, [onLogin]);
+  // ------------------------------------------
 
   const manejarLogin = async (e) => {
     e.preventDefault();
