@@ -162,23 +162,27 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 // ==========================================
 
 async function generarConFallback(prompt) {
-    // Limpiamos la clave por si las moscas
+    // Cogemos tu clave AQ. directamente de Render (sin comillas)
     const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
 
     const modelos = [
+        "gemini-1.5-flash", // Empezamos por este que es el más estable
         "gemini-2.5-flash",
-        "gemini-1.5-flash"
+        "gemini-flash-latest" // Metemos el que te sugirió Google en el curl
     ];
 
     for (const modelo of modelos) {
         try {
-            // URL OFICIAL DE LA API con la clave pasada por parámetro puro
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${geminiApiKey}`;
+            // URL LIMPIA: Ya no le pegamos el ?key= al final
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
+            // TRADUCCIÓN EXACTA DE TU CURL
             const respuesta = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    // AQUÍ ESTÁ LA MAGIA: La cabecera exacta que exige tu clave AQ.
+                    'X-goog-api-key': geminiApiKey
                 },
                 body: JSON.stringify({
                     contents: [{
@@ -187,11 +191,9 @@ async function generarConFallback(prompt) {
                 })
             });
 
-            // Leemos la respuesta como texto crudo primero para evitar que explote
             const textoCrudo = await respuesta.text();
 
             try {
-                // Intentamos convertirlo a JSON
                 const datos = JSON.parse(textoCrudo);
 
                 if (respuesta.ok) {
@@ -201,7 +203,6 @@ async function generarConFallback(prompt) {
 
                 console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
             } catch (jsonError) {
-                // Si no es JSON, capturamos qué demonios nos está devolviendo Google
                 console.error(`🕵️‍♂️ El servidor no devolvió JSON en ${modelo}. Respuesta cruda:`, textoCrudo.substring(0, 200));
             }
 
