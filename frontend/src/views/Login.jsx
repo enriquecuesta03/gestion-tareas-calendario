@@ -20,7 +20,7 @@ function Login({ onLogin }) {
     const code = params.get('code');
 
     // EL CHIVATO: Si esto sale en la consola, la caché está limpia y el código funciona
-    console.log("🕵️‍♂️ COMPROBANDO GITHUB. Código encontrado:", code);
+    console.log("COMPROBANDO GITHUB. Código encontrado:", code);
 
     if (code) {
       // 1. Limpiamos la URL para que no quede rastro del código (estética y seguridad)
@@ -108,11 +108,11 @@ function Login({ onLogin }) {
                   </div>
               </GoogleOAuthProvider>
 
-              <button type="button" onClick={() => window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email`}
-                  style={{ width: '100%', height: '40px', borderRadius: '4px', backgroundColor: '#24292e', border: 'none', color: '#ffffff', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxSizing: 'border-box' }}>
-                  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" style={{ width: '18px', filter: 'invert(1)' }} />
-                  Entrar con GitHub
-              </button>
+          <button type="button" onClick={() => window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&redirect_uri=${window.location.origin}${window.location.pathname}`}
+              style={{ width: '100%', height: '40px', borderRadius: '4px', backgroundColor: '#24292e', border: 'none', color: '#ffffff', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxSizing: 'border-box' }}>
+              <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" style={{ width: '18px', filter: 'invert(1)' }} />
+              Entrar con GitHub
+          </button>
           </div>
 
           <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '30px' }}>¿No tienes cuenta? <span onClick={() => navigate('/registro')} style={{ color: 'var(--accent-green)', fontWeight: '600', cursor: 'pointer' }}>Regístrate aquí</span></p>
