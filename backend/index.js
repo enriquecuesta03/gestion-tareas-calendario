@@ -166,9 +166,10 @@ async function generarConFallback(prompt) {
     const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
 
     const modelos = [
-        "gemini-1.5-flash", // Empezamos por este que es el más estable
         "gemini-2.5-flash",
-        "gemini-flash-latest" // Metemos el que te sugirió Google en el curl
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-flash-latest"
     ];
 
     for (const modelo of modelos) {

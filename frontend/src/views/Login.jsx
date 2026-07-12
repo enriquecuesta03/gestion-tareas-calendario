@@ -5,7 +5,7 @@ import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 const GOOGLE_CLIENT_ID = '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com';
 const GITHUB_CLIENT_ID = 'Ov23liHuJKItfZMT9Qks';
 
-// Variable de entorno para Producción / Local
+// Configuración del endpoint base de la API
 const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
 function Login({ onLogin }) {
@@ -14,19 +14,16 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // --- NUEVO: DETECTOR DE CÓDIGO GITHUB CON CHIVATO ---
+  // Intercepta y procesa el código de autorización de GitHub tras la redirección
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
-    // EL CHIVATO: Si esto sale en la consola, la caché está limpia y el código funciona
-    console.log("COMPROBANDO GITHUB. Código encontrado:", code);
-
     if (code) {
-      // 1. Limpiamos la URL para que no quede rastro del código (estética y seguridad)
+      // Limpia los parámetros de la URL para evitar re-peticiones y mejorar la seguridad
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      // 2. Enviamos el código a Render
+      // Valida el código contra el backend
       fetch(`${API_URL}/api/github`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,10 +32,8 @@ function Login({ onLogin }) {
       .then(res => res.json().then(data => ({ status: res.status, body: data })))
       .then(({ status, body }) => {
         if (status === 200) {
-          // Login perfecto
           onLogin(body);
         } else if (status === 206) {
-          // Si el usuario es nuevo y le falta la fecha
           setError('Registro parcial: Falta tu fecha de nacimiento.');
         } else {
           setError(body.error || 'Error al iniciar sesión con GitHub');
@@ -47,7 +42,6 @@ function Login({ onLogin }) {
       .catch(() => setError('Error de conexión al verificar GitHub'));
     }
   }, [onLogin]);
-  // ------------------------------------------
 
   const manejarLogin = async (e) => {
     e.preventDefault();
