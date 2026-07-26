@@ -1,6 +1,14 @@
+/*********************************************************************************
+Tablero visual de tareas (KanbanBoard).
+Este archivo es el encargado de dibujar las tres columnas ("Por Hacer", 
+"En Progreso" y "Completado") en la pantalla. Controla cómo se ven las 
+tarjetas de las tareas, cómo se colorean las fechas si están caducadas 
+y cómo funciona el sistema para arrastrar y soltar tareas entre las columnas.
+***********************************************************************************/
+
 import React, { useState } from 'react';
 
-// RUTA CORREGIDA
+// Importamos los colores y estilos específicos para el tablero
 import '../../assets/styles/DashboardLayout.css';
 
 function KanbanBoard({ 
@@ -17,10 +25,11 @@ function KanbanBoard({
     cargarComentarios 
 }) {
 
-    // ESTADO PARA CONTROLAR EL BOTÓN "VER MÁS"
+    // Controlamos si queremos ver todas las tareas terminadas o solo las 4 primeras
     const [mostrarTodasCompletadas, setMostrarTodasCompletadas] = useState(false);
-    const LIMITE_COMPLETADAS = 4; // Límite de 4 tareas como pediste
+    const LIMITE_COMPLETADAS = 4; // Límite de tareas completadas visibles por defecto
 
+    // Función para dibujar la fecha de forma bonita y marcarla en rojo si ya ha caducado
     const renderizarFecha = (fechaIso, estado) => {
         if (!fechaIso) {
             return (
@@ -46,6 +55,7 @@ function KanbanBoard({
     return (
         <div style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', paddingBottom: '10px' }}>
             
+            {/* Aviso visual solo para móviles para que el usuario sepa que puede deslizar */}
             <div className="mobile-swipe-hint">
                 Desliza lateralmente para ver más estados
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -53,7 +63,8 @@ function KanbanBoard({
 
             <div className="kanban-board" style={{ marginTop: 0 }}>
                   
-              {/* ================= COLUMNA POR HACER ================= */}
+              {/* ================= COLUMNA: POR HACER ================= */}
+              {/* Esta columna se ilumina cuando arrastramos una tarea por encima de ella */}
               <div className="kanban-col todo" 
                    style={{ 
                        border: columnaDestino === 'Por Hacer' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -79,6 +90,7 @@ function KanbanBoard({
                       <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
                         <h3 className="task-title" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '5px' }}>
                             {tarea.titulo} 
+                            {/* Si la tarea es de una empresa, le ponemos una etiqueta con el nombre */}
                             {tarea.nombre_grupo && <span className="badge-empresa">{tarea.nombre_grupo}</span>}
                         </h3>
                         <p className="task-desc">{tarea.descripcion}</p>
@@ -87,6 +99,7 @@ function KanbanBoard({
                             {renderizarFecha(tarea.fecha_vencimiento, tarea.estado)}
                         </div>
 
+                        {/* Botones de acción que cambian dependiendo de si estamos en móvil o en PC */}
                         <div className="task-actions task-actions-mobile" style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={(e) => { e.stopPropagation(); editarTarea(tarea); }} className="btn-action" style={{flex: 1}}>
                               <span className="desktop-only"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span>
@@ -108,7 +121,7 @@ function KanbanBoard({
                 )}
               </div>
               
-              {/* ================= COLUMNA EN PROGRESO ================= */}
+              {/* ================= COLUMNA: EN PROGRESO ================= */}
               <div className="kanban-col progress" 
                    style={{ 
                        border: columnaDestino === 'En Progreso' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -168,7 +181,7 @@ function KanbanBoard({
                 )}
               </div>
 
-              {/* ================= COLUMNA COMPLETADO ================= */}
+              {/* ================= COLUMNA: COMPLETADO ================= */}
               <div className="kanban-col done" 
                    style={{ 
                        border: columnaDestino === 'Completado' ? '2px dashed var(--border-color)' : '2px solid transparent', 
@@ -176,7 +189,7 @@ function KanbanBoard({
                        transition: 'all 0.2s',
                        display: 'flex', 
                        flexDirection: 'column', 
-                       // Solo aplicamos maxHeight si hemos expandido para que aparezca el scroll
+                       // Si le damos al botón de ver más, activamos la barra de desplazamiento
                        maxHeight: mostrarTodasCompletadas ? '75vh' : 'auto'
                    }}
                    onDragOver={(e) => { e.preventDefault(); setColumnaDestino('Completado'); }} 
@@ -188,7 +201,6 @@ function KanbanBoard({
                     <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>{tareasCompletadas.length}</span>
                 </h2>
 
-                {/* Si no está expandido, ocultamos el scroll (hidden). Si se expande, lo activamos (auto) */}
                 <div style={{ 
                     overflowY: mostrarTodasCompletadas ? 'auto' : 'hidden', 
                     flex: 1, 
@@ -205,7 +217,7 @@ function KanbanBoard({
                         </div>
                     ) : (
                         <>
-                            {/* Filtramos el array: Si no está activo "mostrar todas", hacemos un .slice para coger solo 4 */}
+                            {/* Filtramos la lista: si no hemos pulsado "ver más", mostramos solo las primeras cuatro */}
                             {(mostrarTodasCompletadas ? tareasCompletadas : tareasCompletadas.slice(0, LIMITE_COMPLETADAS)).map(tarea => (
                               <div key={tarea.id} draggable={true} onDragStart={(e) => e.dataTransfer.setData('tareaId', tarea.id.toString())} className="task-card" style={{ opacity: 0.7, flex: 'none' }} onClick={() => { setTareaEnVista(tarea); cargarComentarios(tarea.id); }}>
                                 <h3 className="task-title" style={{ textDecoration: 'line-through' }}>{tarea.titulo}</h3>
@@ -233,7 +245,7 @@ function KanbanBoard({
                               </div>
                             ))}
 
-                            {/* EL BOTÓN MÁGICO: Solo aparece si hay más de 4 tareas */}
+                            {/* Botón para expandir la lista: Solo aparece si el usuario tiene más de 4 tareas completadas */}
                             {tareasCompletadas.length > LIMITE_COMPLETADAS && (
                                 <button 
                                     onClick={() => setMostrarTodasCompletadas(!mostrarTodasCompletadas)}

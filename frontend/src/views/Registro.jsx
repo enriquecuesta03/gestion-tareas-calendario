@@ -1,44 +1,65 @@
+/*********************************************************************************
+Pantalla de registro de nuevos usuarios (Registro).
+Aquí es donde los usuarios nuevos crean su cuenta rellenando sus datos 
+personales. Al igual que en la pantalla de inicio de sesión, permite 
+registrarse de forma tradicional o utilizando una cuenta existente 
+de Google o GitHub para que sea mucho más rápido.
+***********************************************************************************/
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'; 
 
+// Claves de identificación para poder usar los sistemas de Google y GitHub
 const GOOGLE_CLIENT_ID = '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com';
 const GITHUB_CLIENT_ID = 'Ov23liHuJKItfZMT9Qks';
 
-// Variable de entorno para la URL de la API
+// Dirección de nuestro servidor para saber a dónde enviar los datos
 const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.54:3000';
 
 function Registro({ onLogin }) {
   const navigate = useNavigate();
+  
+  // Guardamos los datos que el usuario va escribiendo en las casillas
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  
+  // Controlamos si mostramos un mensaje de error o de éxito
   const [error, setError] = useState('');
   const [exito, setExito] = useState(false);
 
+  // Variables especiales por si el usuario se registra con Google y necesitamos pedirle su fecha de nacimiento
   const [oauthProvider, setOauthProvider] = useState(''); 
   const [oauthTokenTemp, setOauthTokenTemp] = useState('');
   const [oauthNeedsBirthday, setOauthNeedsBirthday] = useState(false);
   const [oauthNombreTemp, setOauthNombreTemp] = useState('');
   const [authFechaNac, setAuthFechaNac] = useState('');
 
+  // Función para registrarnos con el formulario tradicional de correo y contraseña
   const manejarRegistro = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Evitamos que la página se recargue sola
     setError('');
     try {
+      // Enviamos todos los datos al servidor
       const respuesta = await fetch(`${API_URL}/api/registro`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre, email, password, fecha_nacimiento: fechaNacimiento })
       });
       const data = await respuesta.json();
+      
       if (respuesta.ok) {
+        // Si todo va bien, mostramos el mensaje verde y le mandamos a la pantalla de entrar
         setExito(true);
         setTimeout(() => navigate('/login'), 2000);
-      } else setError(data.error || 'Error al registrarse');
+      } else {
+        setError(data.error || 'Error al registrarse');
+      }
     } catch (err) { setError('Error de conexión'); }
   };
 
+  // Función que se activa cuando Google nos confirma los datos del usuario
   const manejarGoogleSuccess = (credentialResponse) => {
     setError('');
     fetch(`${API_URL}/api/google`, {
@@ -47,16 +68,23 @@ function Registro({ onLogin }) {
     })
     .then(res => res.json().then(data => ({ status: res.status, body: data })))
     .then(({ status, body }) => {
+      // Si el servidor nos devuelve un código 206, significa que Google no nos ha dado la fecha de nacimiento
       if (status === 206) {
         setOauthTokenTemp(credentialResponse.credential);
         setOauthNombreTemp(body.nombre);
         setOauthProvider('google');
+        // Activamos esta opción para mostrarle la pantalla extra pidiendo la fecha
         setOauthNeedsBirthday(true);
-      } else if (status === 200) onLogin(body);
-      else setError(body.error || 'Error con Google');
+      } else if (status === 200) {
+        // Si ya teníamos todos los datos de antes, le dejamos entrar directamente
+        onLogin(body);
+      } else {
+        setError(body.error || 'Error con Google');
+      }
     }).catch(() => setError('Error de conexión'));
   };
 
+  // Función para terminar el registro si faltaba la fecha de nacimiento al usar Google
   const manejarRegistroOauthCompletado = (e) => {
     e.preventDefault();
     setError('');
@@ -74,13 +102,16 @@ function Registro({ onLogin }) {
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', display: 'flex', minHeight: '100dvh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-body)', fontFamily: 'var(--font-main)' }}>
       <div style={{ width: '100%', maxWidth: '420px', padding: '40px', backgroundColor: 'var(--bg-card)', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', margin: '20px', boxSizing: 'border-box' }}>
           
+          {/* Título de la aplicación */}
           <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <span style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '-1px', color: 'var(--text-main)' }}>Kora<span style={{ color: 'var(--accent-green)' }}>.</span></span>
           </div>
 
+          {/* Mensajes de aviso (rojo para errores, verde para cuando todo sale bien) */}
           {error && <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>{error}</div>}
           {exito && <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-green)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>¡Registro completado! Redirigiendo...</div>}
 
+          {/* Si el usuario ha usado Google pero nos falta su fecha, le enseñamos esta pantalla */}
           {oauthNeedsBirthday ? (
               <>
                   <h2 style={{ textAlign: 'center', color: 'var(--text-main)', fontSize: '1.2rem', fontWeight: '600', marginBottom: '10px' }}>Completa tu perfil</h2>
@@ -91,6 +122,7 @@ function Registro({ onLogin }) {
                   </form>
               </>
           ) : (
+              /* Si es un registro normal, le enseñamos el formulario completo de toda la vida */
               <>
                   <h2 style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '500', marginBottom: '30px', marginTop: 0 }}>Crea tu cuenta de equipo</h2>
                   <form onSubmit={manejarRegistro} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -101,13 +133,14 @@ function Registro({ onLogin }) {
                       <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Crear Cuenta</button>
                   </form>
 
+                  {/* Línea separadora */}
                   <div style={{ display: 'flex', alignItems: 'center', margin: '25px 0' }}>
                       <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
                       <span style={{ padding: '0 10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>O continuar con</span>
                       <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
                   </div>
 
-                  {/* AQUÍ INYECTAMOS GOOGLE DE FORMA SEGURA */}
+                  {/* Botones para hacer el registro rápido usando Google o GitHub */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
                         <div style={{ width: '100%', height: '40px', overflow: 'hidden', borderRadius: '4px', display: 'flex', justifyContent: 'center' }}>
@@ -122,6 +155,7 @@ function Registro({ onLogin }) {
                       </button>
                   </div>
 
+                  {/* Enlace para volver a la pantalla de iniciar sesión si el usuario ya tenía cuenta */}
                   <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '30px' }}>¿Ya tienes cuenta? <span onClick={() => navigate('/login')} style={{ color: 'var(--accent-green)', fontWeight: '600', cursor: 'pointer' }}>Inicia sesión</span></p>
               </>
           )}

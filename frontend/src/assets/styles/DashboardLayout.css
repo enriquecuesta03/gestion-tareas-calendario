@@ -1,6 +1,14 @@
+/*********************************************************************************
+Archivo de estilos específicos del panel principal (DashboardLayout.css).
+Aquí se ajustan los detalles finos para que la página no se descuadre 
+en las pantallas pequeñas, se configura el comportamiento táctil del 
+tablero de tareas y se diseñan las tarjetas individuales[cite: 20].
+***********************************************************************************/
+
 /* =========================================================
-   ANTI-DESBORDAMIENTO GLOBAL MÓVIL (Dashboard)
+   AJUSTES PARA PANTALLAS PEQUEÑAS (Evitar descuadres)
    ========================================================= */
+/* Obligamos a que la página entera nunca sea más ancha que la propia pantalla del dispositivo, cortando cualquier cosa que sobresalga[cite: 20] */
 body, html {
     overflow-x: hidden !important;
     width: 100vw !important;
@@ -8,13 +16,17 @@ body, html {
     position: relative;
 }
 
+/* Reglas específicas cuando la pantalla es del tamaño de un teléfono[cite: 20] */
 @media (max-width: 768px) {
+    /* Forzamos a que las cajas principales no se salgan de los márgenes[cite: 20] */
     .app-layout, .mobile-header, .main-content {
         width: 100vw !important;
         max-width: 100% !important;
         overflow-x: hidden !important;
         box-sizing: border-box !important;
     }
+    
+    /* Permitimos que el calendario se pueda deslizar hacia los lados si no cabe entero[cite: 20] */
     .calendar-wrapper {
         box-sizing: border-box !important;
         width: 100% !important;
@@ -22,22 +34,25 @@ body, html {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
+    
+    /* Reorganizamos los botones superiores del calendario para que se apilen mejor[cite: 20] */
     .fc .fc-toolbar.fc-header-toolbar { flex-direction: column !important; gap: 12px !important; }
     .fc .fc-toolbar-chunk { display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 5px !important; width: 100% !important; }
     .fc .fc-button { padding: 0.4em 0.6em !important; font-size: 0.85em !important; }
 }
 
 /* =========================================================
-   SIDEBAR: ANCLAJE Y SCROLL
+   MENÚ LATERAL: ZONA DE DESPLAZAMIENTO Y BOTONES FIJOS
    ========================================================= */
 .sidebar {
     display: flex !important;
     flex-direction: column !important;
-    height: 100dvh !important;
+    height: 100dvh !important; /* Ocupa exactamente la altura visible del móvil[cite: 20] */
     max-height: 100dvh !important;
     overflow: hidden !important;
 }
 
+/* Permitimos hacer scroll en la lista de botones pero ocultamos la barra gris fea del navegador[cite: 20] */
 .sidebar-scroll-area {
     flex: 1;
     overflow-y: auto;
@@ -45,6 +60,7 @@ body, html {
 }
 .sidebar-scroll-area::-webkit-scrollbar { display: none; }
 
+/* La zona de abajo (tema oscuro, perfil y cerrar sesión) se queda siempre fija[cite: 20] */
 .sidebar-footer-fixed {
     flex: none;
     border-top: 1px solid var(--border-color);
@@ -56,13 +72,15 @@ body, html {
 }
 
 /* =========================================================
-   KANBAN MÓVIL: UX TÁCTIL Y DESLIZAMIENTO
+   TABLERO EN MÓVILES: DESLIZAR CON EL DEDO Y BOTONES TÁCTILES
    ========================================================= */
+/* Clases auxiliares para mostrar u ocultar elementos dependiendo del dispositivo[cite: 20] */
 .mobile-only { display: none !important; }
 .desktop-only { display: flex; align-items: center; justify-content: center; gap: 5px; }
 .mobile-swipe-hint { display: none; }
 
 @media (max-width: 768px) {
+    /* Un pequeño aviso animado que le indica al usuario que puede deslizar el tablero hacia un lado[cite: 20] */
     .mobile-swipe-hint {
         display: flex !important;
         align-items: center;
@@ -75,6 +93,7 @@ body, html {
         animation: pulseSwipe 2s infinite;
     }
 
+    /* Animación de parpadeo suave para el aviso[cite: 20] */
     @keyframes pulseSwipe {
         0% { opacity: 0.6; transform: translateX(0); }
         50% { opacity: 1; transform: translateX(5px); }
@@ -84,6 +103,7 @@ body, html {
     .desktop-only { display: none !important; }
     .mobile-only { display: flex !important; }
 
+    /* Convertimos el tablero en un carrusel horizontal para pantallas pequeñas[cite: 20] */
     .kanban-board {
         display: flex !important;
         flex-direction: row !important;
@@ -93,13 +113,14 @@ body, html {
         margin: 0 !important;
         padding: 0 5px 20px 5px !important;
         box-sizing: border-box !important;
-        scroll-snap-type: x mandatory !important;
+        scroll-snap-type: x mandatory !important; /* Hace que las columnas encajen en el centro al soltar el dedo[cite: 20] */
         -webkit-overflow-scrolling: touch !important;
         scrollbar-width: none; 
         gap: 15px !important;
     }
     .kanban-board::-webkit-scrollbar { display: none; } 
 
+    /* Cada columna ocupa casi toda la pantalla para que se vea clara y grande[cite: 20] */
     .kanban-col {
         flex: 0 0 82vw !important;
         min-width: 82vw !important;
@@ -108,6 +129,7 @@ body, html {
         box-sizing: border-box !important;
     }
 
+    /* Diseño de los botones dentro de cada tarea para que sean fáciles de pulsar con el pulgar[cite: 20] */
     .task-actions {
         display: flex !important;
         flex-direction: column !important;
@@ -134,18 +156,18 @@ body, html {
 }
 
 /* ---------------------------------------------------
-   ESTÉTICA MINIMALISTA DE LA TARJETA
+   DISEÑO LIMPIO DE LAS TARJETAS DE TAREA
 --------------------------------------------------- */
 .task-card {
-  cursor: grab;
-  padding: 20px; /* Vital para que tenga área de arrastre en PC */
+  cursor: grab; /* Muestra una manita para indicar que se puede arrastrar[cite: 20] */
+  padding: 20px; 
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
   border: 1px solid var(--border-color);
   background-color: var(--bg-card);
   border-radius: 8px;
 }
 
-/* Efecto hover elegante en PC */
+/* Efecto visual al pasar el ratón por encima en ordenadores: parece que la tarjeta se levanta[cite: 20] */
 @media (min-width: 768px) {
   .task-card:hover {
     box-shadow: 0 6px 16px rgba(0,0,0,0.06);
@@ -154,16 +176,16 @@ body, html {
 }
 
 /* ---------------------------------------------------
-   BOTONES: SOLO EN MÓVIL
+   BOTONES DE ACCIÓN RÁPIDA DENTRO DE LA TAREA
 --------------------------------------------------- */
-/* Ocultamos la caja de los botones en pantallas grandes (PC) */
+/* En ordenadores se usa el ratón para mover las tareas, así que escondemos los botones innecesarios[cite: 20] */
 @media (min-width: 768px) {
   .task-actions-mobile {
     display: none !important;
   }
 }
 
-/* En móvil (menos de 768px) los mostramos normales */
+/* En teléfonos móviles mostramos los botones para mover la tarea de columna sin tener que arrastrar[cite: 20] */
 @media (max-width: 767px) {
   .task-actions-mobile {
     display: flex;
@@ -175,12 +197,13 @@ body, html {
 }
 
 /* ---------------------------------------------------
-   FECHAS DE VENCIMIENTO SUTILES
+   DISEÑO DE LAS ETIQUETAS DE FECHA
 --------------------------------------------------- */
+/* Etiqueta normal de color gris sutil[cite: 20] */
 .task-date-badge {
   display: inline-block;
-  background-color: var(--bg-body); /* Gris neutro de fondo */
-  color: var(--text-muted); /* Gris oscuro para el texto */
+  background-color: var(--bg-body); 
+  color: var(--text-muted); 
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
@@ -188,7 +211,7 @@ body, html {
   letter-spacing: 0.3px;
 }
 
-/* Color rojo apagado solo si la tarea está caducada */
+/* Si la tarea está caducada, cambiamos la etiqueta a un color rojo apagado para que destaque[cite: 20] */
 .task-date-badge.overdue {
   background-color: rgba(239, 68, 68, 0.08);
   color: var(--danger-color);

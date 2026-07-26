@@ -1,16 +1,32 @@
+<!-- ==================================================================================
+Archivo raíz de la página web (index.html).
+Esta es la puerta principal de la aplicación. Es el único archivo de estructura 
+web clásico que carga el navegador. Está prácticamente vacío porque su única 
+función es preparar el terreno y llamar a todo nuestro código para que dibuje 
+la página de forma dinámica.
+=================================================================================== -->
+
 <!doctype html>
-<html lang="es"> <head>
+<html lang="es"> 
+  <head>
+    <!-- Le decimos al navegador que use el sistema de texto universal para que las eñes y los acentos se vean perfectos sin romperse -->
     <meta charset="UTF-8" />
     
+    <!-- El pequeño logo que aparece en la pestaña superior del navegador -->
     <link rel="icon" type="image/png" href="/favicon.png" />
     
+    <!-- Instrucción vital para teléfonos móviles: le dice a la pantalla que se adapte al ancho del dispositivo sin hacer un zoom extraño -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- El nombre que sale en la pestaña de arriba del navegador -->
     <title>Kora</title>
     
   </head>
   <body>
+    <!-- Esta es la "caja vacía" (contenedor principal) donde nuestra aplicación va a inyectar y dibujar todas las pantallas, ventanas y botones -->
     <div id="root"></div>
+    
+    <!-- El cable principal que conecta este archivo base con todo nuestro motor lógico (el archivo main.jsx) -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

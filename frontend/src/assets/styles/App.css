@@ -1,6 +1,17 @@
+/*********************************************************************************
+Archivo principal de diseño visual (Estilos CSS).
+Aquí se definen los colores, el tamaño de la letra y cómo se organizan 
+las piezas en la pantalla. Controla desde el modo oscuro hasta cómo 
+se adapta la aplicación cuando la abrimos desde un teléfono móvil, 
+convirtiéndola en una experiencia parecida a una app nativa.
+***********************************************************************************/
+
 /* =========================================
-   VARIABLES DE TEMA (DISEÑO SAAS MODERNO Y SERIO)
+   COLORES Y TIPOGRAFÍA BASE
    ========================================= */
+/* Aquí guardamos los colores exactos de la aplicación para no tener que escribirlos 
+   de memoria en cada archivo. Si un día queremos cambiar el verde principal por azul, 
+   solo hay que cambiarlo aquí una vez y se actualizará en toda la página. */
 :root {
   --font-main: 'Inter', sans-serif;
   --bg-body: #f9fafb;
@@ -16,6 +27,8 @@
   --sidebar-width: 260px;
 }
 
+/* Cuando el usuario activa el "Modo Oscuro", cambiamos automáticamente los colores 
+   de las variables anteriores para que el fondo sea negro y las letras blancas. */
 body.dark-mode {
   --bg-body: #111827;
   --bg-sidebar: #1f2937;
@@ -28,6 +41,7 @@ body.dark-mode {
   --accent-green-hover: #34d399;
 }
 
+/* Estilos generales que se aplican a toda la pantalla por defecto */
 body {
   font-family: var(--font-main);
   background-color: var(--bg-body);
@@ -37,8 +51,9 @@ body {
 }
 
 /* =========================================
-   CLASE GLOBAL PARA ENCABEZADOS DE SECCIÓN
+   TÍTULOS PRINCIPALES
    ========================================= */
+/* Diseño uniforme para todos los títulos que encabezan cada sección de la aplicación */
 .section-title {
   margin-top: 0;
   margin-bottom: 20px;
@@ -52,14 +67,17 @@ body {
 }
 
 /* =========================================
-   LAYOUT: MENÚ LATERAL (SIDEBAR)
+   ESTRUCTURA BASE Y MENÚ LATERAL
    ========================================= */
+/* Contenedor invisible que evita que la página haga cosas raras o muestre 
+   barras de desplazamiento donde no debe. */
 .app-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
+/* Diseño del menú de navegación de la izquierda */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--bg-sidebar);
@@ -88,6 +106,7 @@ body {
   padding: 0 15px;
 }
 
+/* Estilo de los enlaces del menú y cómo cambian cuando pasamos el ratón por encima */
 .sidebar-nav button {
   background: transparent;
   border: none;
@@ -107,6 +126,7 @@ body {
   color: var(--text-main);
 }
 
+/* Estilo especial para resaltar la pantalla en la que estamos actualmente */
 .sidebar-nav button.active {
   background-color: rgba(16, 185, 129, 0.1); 
   color: var(--accent-green);
@@ -121,6 +141,7 @@ body {
   gap: 15px;
 }
 
+/* Zona central donde se carga el contenido (el tablero, los gráficos, etc.) */
 .main-content {
   flex: 1;
   overflow-y: auto;
@@ -129,7 +150,7 @@ body {
 }
 
 /* =========================================
-   KANBAN Y TARJETAS
+   TABLERO VISUAL (KANBAN)
    ========================================= */
 .kanban-board {
   display: flex;
@@ -138,6 +159,7 @@ body {
   margin-top: 20px;
 }
 
+/* Cada una de las tres columnas (Por Hacer, En Progreso, Completado) */
 .kanban-col {
   background-color: var(--bg-kanban-col);
   border-radius: 10px;
@@ -156,6 +178,8 @@ body {
   border: none;
 }
 
+/* Tarjetita individual de cada tarea. Le añadimos un pequeño efecto de sombra 
+   y elevación cuando se le pasa el ratón por encima para indicar que se puede arrastrar. */
 .task-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -185,7 +209,9 @@ body {
   margin-bottom: 15px;
 }
 
-/* Etiquetas y Botones */
+/* =========================================
+   ETIQUETAS Y BOTONES
+   ========================================= */
 .badge-empresa {
   background-color: var(--bg-body);
   color: var(--text-muted);
@@ -197,6 +223,7 @@ body {
   font-weight: 600;
 }
 
+/* Botones secundarios (como Editar o Cancelar) */
 .btn-action {
   background-color: var(--bg-body);
   color: var(--text-main);
@@ -214,6 +241,7 @@ body {
   color: var(--accent-green);
 }
 
+/* Botón de borrar, forzado en color rojo para que destaque */
 .btn-delete {
   border-color: var(--danger-color) !important;
   color: var(--danger-color) !important;
@@ -224,6 +252,7 @@ body {
   color: white !important;
 }
 
+/* Botones principales (como Guardar o Crear) */
 .btn-submit, .btn-add {
   background-color: var(--accent-green);
   color: white;
@@ -240,8 +269,9 @@ body {
 }
 
 /* =========================================
-   INTERRUPTOR MODO OSCURO
+   INTERRUPTOR DEL MODO OSCURO
    ========================================= */
+/* Diseño personalizado del pequeño interruptor deslizante */
 .theme-switch-wrapper {
   display: flex;
   align-items: center;
@@ -288,8 +318,10 @@ body {
 }
 
 /* =========================================
-   FULLCALENDAR ADAPTACIÓN MODERNA
+   DISEÑO DEL CALENDARIO
    ========================================= */
+/* Ajustamos la herramienta del calendario para que sus colores cambien 
+   automáticamente cuando el usuario activa el modo oscuro. */
 .calendar-wrapper {
   background-color: var(--bg-card);
   padding: 20px;
@@ -315,10 +347,10 @@ body.dark-mode .fc {
 
 
 /* ====================================================
-   DISEÑO RESPONSIVE (ESTILO APP NATIVA MÓVIL)
+   ADAPTACIÓN PARA TELÉFONOS MÓVILES (ESTILO APP NATIVA)
    ==================================================== */
 
-/* Ocultar elementos móviles en versión PC */
+/* Si estamos en un ordenador, ocultamos los botones y menús diseñados para móviles */
 @media (min-width: 769px) {
   .mobile-header { display: none !important; }
   .fab-button { display: none !important; }
@@ -326,6 +358,8 @@ body.dark-mode .fc {
   .sidebar-overlay { display: none !important; }
 }
 
+/* Si la pantalla es pequeña (teléfono), aplicamos todos estos cambios para 
+   que se comporte como una aplicación móvil instalada. */
 @media (max-width: 768px) {
   .app-layout { 
     flex-direction: column !important; 
@@ -333,7 +367,7 @@ body.dark-mode .fc {
     overflow: hidden !important; 
   }
 
-  /* Cabecera Móvil Fija */
+  /* Aparece una barra superior típica de aplicación con el logo y el botón del menú */
   .mobile-header { 
     display: flex !important; 
     justify-content: space-between !important; 
@@ -347,14 +381,14 @@ body.dark-mode .fc {
   .mobile-logo { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin: 0; }
   .mobile-logo span { color: var(--accent-green); }
 
-  /* Menú lateral flotante */
+  /* El menú lateral se oculta y solo aparece deslizándose desde la izquierda cuando tocamos el botón */
   .sidebar { position: fixed !important; top: 0 !important; left: -100% !important; height: 100vh !important; z-index: 999 !important; transition: left 0.3s ease !important; width: 280px !important; box-shadow: 5px 0 15px rgba(0,0,0,0.2) !important; }
   .sidebar.open { left: 0 !important; }
   .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 998; }
   .sidebar-overlay.open { display: block !important; }
   .close-sidebar-btn { display: block !important; background: none; border: none; color: var(--text-muted); font-size: 2rem; cursor: pointer; }
 
-  /* Contenido principal */
+  /* Ajustes del contenido principal para dejar espacio a la barra superior */
   .panel-formulario { display: none !important; }
   .main-content { 
     padding: 15px !important; 
@@ -363,11 +397,11 @@ body.dark-mode .fc {
     overflow-x: hidden !important; 
   }
 
-  /* Forzamos contenedor flex general a vertical */
   .main-content > div:first-of-type { flex-direction: column !important; width: 100% !important; }
   .main-content > div:first-of-type > div { width: 100% !important; flex: none !important; }
 
-  /* TABLERO KANBAN (CARRUSEL SWIPE) */
+  /* El tablero se convierte en un carrusel. En lugar de ver las tres columnas a la vez, 
+     vemos una y nos movemos a las otras deslizando el dedo por la pantalla. */
   .kanban-board { 
     display: flex !important; 
     flex-direction: row !important; 
@@ -389,7 +423,8 @@ body.dark-mode .fc {
     scroll-snap-align: center !important; 
   }
 
-  /* BOTÓN FLOTANTE ESTILO PÍLDORA */
+  /* Añadimos un botón grande y flotante en la esquina inferior derecha para 
+     crear tareas fácilmente con el pulgar. */
   .fab-button { 
     display: flex !important; 
     position: fixed !important; 

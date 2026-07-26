@@ -1,33 +1,46 @@
+/*********************************************************************************
+Herramienta central de gestión de datos (useTareas).
+Este archivo funciona como el motor de la aplicación. Es el encargado de 
+comunicarse con el servidor para pedir, guardar, actualizar y borrar todas 
+las tareas, empresas, vacaciones y comentarios. También maneja la lógica para 
+repetir tareas automáticamente y controla los avisos que saltan en el ordenador.
+***********************************************************************************/
+
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
+// Dirección del servidor para saber a dónde conectarse
 const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
 export function useTareas(token, onLogout) {
-    // 1. ESTADOS DE DATOS PRINCIPALES
+    // 1. Memoria interna para guardar la información mientras usamos la aplicación
     const [tareas, setTareas] = useState([]);
     const [festivos, setFestivos] = useState([]);
     const [vacaciones, setVacaciones] = useState([]);
     const [misGrupos, setMisGrupos] = useState([]);
     const [comentarios, setComentarios] = useState([]);
     
-    // 2. CONFIGURACIÓN DE CABECERAS Y TOASTS
+    // 2. Configuración de seguridad y diseño de los mensajes de aviso
+    // Preparamos la llave (token) que enviamos al servidor para identificarnos
     const headersConAuth = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` });
     
+    // Funciones para mostrar los cartelitos emergentes de éxito (verde) o error (rojo)
     const notificarExito = (mensaje) => toast.success(mensaje, { style: { background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--accent-green)' }, iconTheme: { primary: 'var(--accent-green)', secondary: 'white' }});
     const notificarError = (mensaje) => toast.error(mensaje, { style: { background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--danger-color)' }, iconTheme: { primary: 'var(--danger-color)', secondary: 'white' }});
 
-    // 3. FUNCIONES DE CARGA (READ)
+    // 3. Funciones para pedir información al servidor y cargarla en la pantalla
+    // Si el servidor nos dice que la sesión caducó (errores 401/403), cerramos la sesión
     const cargarTareas = () => fetch(`${API_URL}/api/tareas`, { headers: headersConAuth() }).then(res => { if (res.status === 401 || res.status === 403) onLogout(); return res.json(); }).then(datos => setTareas(Array.isArray(datos) ? datos : []));
     const cargarMisGrupos = () => fetch(`${API_URL}/api/grupos`, { headers: headersConAuth() }).then(res => res.json()).then(data => setMisGrupos(Array.isArray(data) ? data : []));
     const cargarFestivos = () => fetch(`${API_URL}/api/festivos`).then(res => res.json()).then(datos => setFestivos(datos));
     const cargarVacaciones = () => fetch(`${API_URL}/api/vacaciones`, { headers: headersConAuth() }).then(res => res.json()).then(data => setVacaciones(Array.isArray(data) ? data : []));
     const cargarComentarios = (tareaId) => fetch(`${API_URL}/api/tareas/${tareaId}/comentarios`, { headers: headersConAuth() }).then(res => res.json()).then(data => setComentarios(Array.isArray(data) ? data : []));
 
-    // 4. FUNCIONES DE MODIFICACIÓN (CREATE, UPDATE, DELETE)
+    // 4. Funciones para crear, modificar o eliminar información de la base de datos
     const guardarTarea = async (url, metodo, datosTarea, esEdicion) => {
         try {
             const respuesta = await fetch(url, { method: metodo, headers: headersConAuth(), body: JSON.stringify(datosTarea) });
+            // Si no tenemos permiso, mostramos el error y cancelamos
             if (respuesta.status === 403) { const dataError = await respuesta.json(); notificarError(dataError.error); return false; }
             cargarTareas(); 
             notificarExito(esEdicion ? "Tarea actualizada" : "Nueva tarea registrada");
@@ -36,6 +49,7 @@ export function useTareas(token, onLogout) {
     };
 
     const borrarTarea = async (id, setTareaEnVista) => {
+        // Pedimos confirmación antes de borrar nada para evitar accidentes
         if (!window.confirm('¿Seguro que quieres borrar esta tarea?')) return false;
         try {
             const respuesta = await fetch(`${API_URL}/api/tareas/${id}`, { method: 'DELETE', headers: headersConAuth() });
@@ -55,6 +69,8 @@ export function useTareas(token, onLogout) {
     };
 
     const cambiarEstado = async (id, nuevoEstado, obtenerFechaHoraLocalStr) => {
+        // LÓGICA DE REPETICIÓN: Si completamos la tarea y estaba configurada para repetirse, 
+        // calculamos la fecha de la próxima vez y creamos una tarea nueva idéntica.
         if (nuevoEstado === 'Completado') {
             const t = tareas.find(t => t.id === id);
             if (t && t.repeticion && t.repeticion !== 'ninguna' && obtenerFechaHoraLocalStr) {
@@ -77,7 +93,7 @@ export function useTareas(token, onLogout) {
         } catch (error) { console.error(error); }
     };
 
-    // COMENTARIOS
+    // 5. Funciones para gestionar el panel de comentarios de cada tarea
     const enviarComentario = (tareaId, nuevoComentario, cbLimpiar) => {
         if (!nuevoComentario.trim() || !tareaId) return;
         fetch(`${API_URL}/api/tareas/${tareaId}/comentarios`, { method: 'POST', headers: headersConAuth(), body: JSON.stringify({ texto: nuevoComentario })})
@@ -97,26 +113,33 @@ export function useTareas(token, onLogout) {
         } catch (error) { console.error(error); }
     };
 
-    // 5. EFECTOS DE INICIALIZACIÓN Y NOTIFICACIONES
+    // 6. Arranque inicial y sistema de alertas del ordenador
     useEffect(() => {
         if (token) {
+            // Nada más iniciar sesión, traemos todos los datos principales
             cargarTareas(); cargarMisGrupos(); cargarFestivos(); cargarVacaciones();
+            
+            // Le pedimos permiso al usuario para mostrarle notificaciones en su sistema operativo
             if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); 
         }
     }, [token]);
 
+    // Un cronómetro oculto que revisa cada minuto si alguna tarea ha llegado a su fecha de aviso
     useEffect(() => {
         if (!token) return;
         const intervalo = setInterval(() => {
             if (Notification.permission === 'granted') {
                 const ahora = Date.now();
                 tareas.forEach(tarea => {
+                    // Comprobamos si la alerta de la tarea tiene que sonar justo en este minuto exacto
                     if (tarea.estado !== 'Completado' && tarea.fecha_notificacion && (ahora >= new Date(tarea.fecha_notificacion).getTime()) && (ahora - new Date(tarea.fecha_notificacion).getTime() < 60000)) { 
                         new Notification("Recordatorio", { body: `Pendiente: ${tarea.titulo}` }); 
                     }
                 });
             }
         }, 60000);
+        
+        // Apagamos el cronómetro si el usuario cierra la aplicación
         return () => clearInterval(intervalo);
     }, [tareas, token]);
 

@@ -1,3 +1,12 @@
+/*********************************************************************************
+Formulario para crear y editar tareas (TaskForm).
+Este componente muestra la pantalla donde el usuario rellena los datos de 
+una tarea: el título, la descripción, si es personal o de empresa, la fecha 
+límite, las alertas y si se repite. También incluye el botón del asistente 
+de voz con Inteligencia Artificial, que escucha al usuario y rellena todos 
+estos campos de forma automática.
+***********************************************************************************/
+
 import React from 'react';
 
 function TaskForm({
@@ -19,14 +28,14 @@ function TaskForm({
     return (
         <form onSubmit={manejarEnvio} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            {/* ESTILOS INCRUSTADOS PARA ESTRUCTURA RESPONSIVA NATIVA */}
+            {/* Estilos de diseño integrados para que el formulario se adapte bien a ordenadores y móviles */}
             <style>{`
                 .tf-row { display: flex; gap: 12px; align-items: flex-start; }
-                .tf-col-40 { flex: 0 0 38%; } /* La fecha ocupa el 38% (más estrecha) */
-                .tf-col-60 { flex: 1; }       /* Las alertas ocupan el resto (más anchas) */
+                .tf-col-40 { flex: 0 0 38%; } /* La fecha es un poco más estrecha */
+                .tf-col-60 { flex: 1; }       /* Las alertas ocupan el espacio restante */
                 .tf-col-50 { flex: 1; }
                 
-                /* Estilo de inputs nativos con área táctil mejorada (48px de alto aprox) */
+                /* Diseño de los campos de texto para que sean fáciles de pulsar en pantallas táctiles */
                 .tf-input {
                     width: 100%; padding: 12px; border-radius: 8px;
                     border: 1px solid var(--border-color);
@@ -36,7 +45,7 @@ function TaskForm({
                 }
                 .tf-input:focus { outline: none; border-color: var(--accent-green); }
 
-                /* En móvil, todo se apila verticalmente para no apretujar NADA */
+                /* En teléfonos móviles, colocamos un campo debajo del otro para que nada se vea apretado */
                 @media (max-width: 768px) {
                     .tf-row { flex-direction: column; gap: 16px; }
                     .tf-col-40, .tf-col-60, .tf-col-50 { width: 100%; flex: none; }
@@ -44,7 +53,7 @@ function TaskForm({
                 }
             `}</style>
 
-            {/* FILA 1: TÍTULO Y VOZ */}
+            {/* PRIMERA PARTE: Título de la tarea y el botón del asistente de voz */}
             <div className="tf-row">
                 <input 
                     type="text" 
@@ -71,6 +80,7 @@ function TaskForm({
                         transition: 'all 0.3s', fontWeight: '600', flex: 'none'
                     }}
                 >
+                    {/* Cambiamos el icono y el texto del botón dependiendo de lo que esté haciendo la IA */}
                     {escuchando ? (
                         <>
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,7 +110,7 @@ function TaskForm({
                 </button>
             </div>
             
-            {/* FILA 2: DESCRIPCIÓN */}
+            {/* SEGUNDA PARTE: Descripción opcional */}
             <input 
                 type="text" 
                 placeholder="Descripción (opcional)" 
@@ -109,11 +119,11 @@ function TaskForm({
                 className="tf-input"
             />
             
-            {/* FILA 3: CONTEXTO Y ASIGNACIÓN (50 / 50 en PC) */}
+            {/* TERCERA PARTE: Elegir si es una tarea personal o de la empresa, y a quién se le asigna */}
             <div className="tf-row">
                 <div className="tf-col-50">
                     <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Contexto operativo
+                        Espacio de trabajo
                     </label>
                     <select 
                         value={tareaGrupoId} 
@@ -128,6 +138,7 @@ function TaskForm({
                     </select>
                 </div>
                 
+                {/* La lista de trabajadores a los que asignar la tarea solo sale si hemos elegido un grupo de empresa */}
                 {tareaGrupoId && !esEdicion && (
                     <div className="tf-col-50">
                         <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -148,7 +159,7 @@ function TaskForm({
                 )}
             </div>
 
-            {/* FILA 4: FECHA (38%) Y ALERTAS (62%) */}
+            {/* CUARTA PARTE: Fechas, horas y programación de alertas para que el sistema nos avise */}
             <div className="tf-row">
                 <div className="tf-col-40">
                     <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -188,6 +199,7 @@ function TaskForm({
                         <option value="semana">Notificar la próxima semana</option>
                         <option value="personalizado">Configuración manual...</option>
                     </select>
+                    {/* Si elegimos configuración manual, mostramos el selector exacto de fecha y hora */}
                     {opcionAviso === 'personalizado' && (
                         <input 
                             type="datetime-local" 
@@ -201,10 +213,10 @@ function TaskForm({
                 </div>
             </div>
             
-            {/* FILA 5: RECURRENCIA */}
+            {/* QUINTA PARTE: Si es una tarea que hay que repetir cada cierto tiempo (diaria, semanal...) */}
             <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Recurrencia (Proyección)
+                    Repetición automática
                 </label>
                 <div className="tf-row" style={{ alignItems: 'center' }}>
                     <select 
@@ -213,13 +225,14 @@ function TaskForm({
                         className="tf-input"
                         style={{ flex: 1 }}
                     >
-                        <option value="ninguna">Evento único (Sin recurrencia)</option>
-                        <option value="diaria">Recurrencia Diaria</option>
-                        <option value="semanal">Recurrencia Semanal</option>
-                        <option value="mensual">Recurrencia Mensual</option>
-                        <option value="anual">Recurrencia Anual</option>
-                        <option value="personalizado">Intervalo personalizado...</option>
+                        <option value="ninguna">Evento único (No se repite)</option>
+                        <option value="diaria">Repetir cada día</option>
+                        <option value="semanal">Repetir cada semana</option>
+                        <option value="mensual">Repetir cada mes</option>
+                        <option value="anual">Repetir cada año</option>
+                        <option value="personalizado">Repetir cada varios días...</option>
                     </select>
+                    {/* Si elegimos días personalizados, enseñamos una cajita para escribir el número exacto */}
                     {repeticion === 'personalizado' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <span style={{fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500'}}>Cada:</span>
@@ -239,7 +252,7 @@ function TaskForm({
                 </div>
             </div>
             
-            {/* BOTONES DE ACCIÓN */}
+            {/* SEXTA PARTE: Botones finales para guardar la tarea o cancelar */}
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button type="submit" className="btn-add" style={{ flex: 1, padding: '14px', fontSize: '1rem', fontWeight: '600', borderRadius: '8px' }}>
                     {esEdicion ? 'Guardar Cambios' : 'Crear Tarea'}

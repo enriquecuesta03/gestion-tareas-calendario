@@ -1,29 +1,39 @@
+/*********************************************************************************
+Archivo principal del servidor (index.js).
+Aquí se configura el servidor Express y se definen las rutas principales 
+de la aplicación. Conecta la base de datos, maneja el acceso de los 
+usuarios mediante tokens y gestiona las tareas (crear, leer, actualizar, borrar).
+También incluye las funciones de Inteligencia Artificial (Gemini y ElevenLabs) 
+y la conexión con la API externa de festivos.
+***********************************************************************************/
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Importamos nuestros propios módulos
+// Importamos nuestros propios módulos de la base de datos y las rutas
 const db = require('./db');
 const authRoutes = require('./routes/auth');
 const gruposRoutes = require('./routes/grupos');
 
+// Iniciamos la aplicación y configuramos los permisos
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); 
 
-// Le decimos a Express que use las rutas separadas de Login y Registro
+// Asignamos las rutas separadas para el Login, Registro y Grupos
 app.use('/api', authRoutes);
-
 app.use('/api/grupos', gruposRoutes);
 
+// Contraseña secreta para comprobar las sesiones de los usuarios
 const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
 
 // Inicializamos la IA de Google Gemini usando la variable de entorno
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AQ.Ab8RN6IVqrTFV7rcSUIS4RhZqMdySH66HV6BZsFcLmjWu1ZXnA");
 
-// Middleware de seguridad para proteger las rutas de abajo
+// Función de seguridad para comprobar que el usuario tiene un token válido
 const verificarToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader) return res.status(403).json({ error: 'Acceso denegado. No hay token.' });
@@ -31,7 +41,7 @@ const verificarToken = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) return res.status(401).json({ error: 'Token inválido o expirado' });
-        req.usuario = decoded;
+        req.usuario = decoded; 
         next();
     });
 };
@@ -43,10 +53,10 @@ const verificarToken = (req, res, next) => {
 // 1. OBTENER TAREAS
 app.get('/api/tareas', verificarToken, (req, res) => {
     const userId = req.usuario.id;
-    // La magia está en este SELECT. Pedimos:
-    // - Tareas personales (grupo_id es nulo)
-    // - Tareas de empresa que me han asignado (asignado_a = mi id)
-    // - Todas las tareas de la empresa si soy el jefe del grupo
+    // Pedimos a la base de datos:
+    // - Mis tareas personales (sin grupo)
+    // - Las tareas de empresa que me han asignado a mí
+    // - Todas las tareas de la empresa si soy el jefe
     const query = `
         SELECT t.*, g.nombre AS nombre_grupo 
         FROM tareas t
@@ -71,9 +81,9 @@ app.post('/api/tareas', verificarToken, (req, res) => {
     const notificacionFinal = fecha_notificacion ? fecha_notificacion : null;
     const repeticionFinal = repeticion ? repeticion : 'ninguna';
 
-    // Si viene con un grupo_id desde React, lo guardamos. Si no, es nulo (personal).
+    // Guardamos si la tarea pertenece a un grupo o es personal
     const grupoFinal = grupo_id ? grupo_id : null;
-    // Si no hay asignado, por defecto es para uno mismo
+    // Si no se la asignamos a nadie en concreto, se la asigna al usuario que la crea
     const asignadoFinal = asignado_a ? asignado_a : req.usuario.id;
 
     const query = 'INSERT INTO tareas (titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion, usuario_id, grupo_id, asignado_a) VALUES (?, ?, ?, "Por Hacer", ?, ?, ?, ?, ?)';
@@ -84,13 +94,13 @@ app.post('/api/tareas', verificarToken, (req, res) => {
     });
 });
 
-// 3. ACTUALIZAR TAREA (Permisos granulares)
+// 3. ACTUALIZAR TAREA (Controlando quién puede editar)
 app.put('/api/tareas/:id', verificarToken, (req, res) => {
     const idTarea = req.params.id;
     const userId = req.usuario.id;
     const { titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion } = req.body;
 
-    // Primero miramos qué tarea es y qué rol tiene el usuario en esa empresa
+    // Primero buscamos la tarea y el rol del usuario para saber si tiene permisos
     db.query('SELECT t.*, gu.rol FROM tareas t LEFT JOIN grupo_usuarios gu ON t.grupo_id = gu.grupo_id AND gu.usuario_id = ? WHERE t.id = ?', [userId, idTarea], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
 
@@ -99,9 +109,9 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
         const soyJefe = tarea.rol === 'jefe';
         const soyAsignado = tarea.asignado_a === userId;
 
-        // ¿Están intentando editar los detalles (título, fechas)?
+        // Si están editando el texto o las fechas de la tarea:
         if (titulo) {
-            // Regla: Solo el creador (si es personal) o el jefe (si es empresa) puede editar los detalles.
+            // Solo el creador (si es personal) o el jefe (si es empresa) puede editar los detalles
             if (!esPersonal && !soyJefe) {
                 return res.status(403).json({ error: 'Solo el jefe de la empresa puede modificar los detalles de esta tarea' });
             }
@@ -115,9 +125,9 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
                 return res.json({ mensaje: 'Tarea actualizada correctamente' });
             });
         }
-        // ¿Están intentando solo mover la tarjeta de columna (estado)?
+        // Si solo están moviendo la tarea de columna (cambio de estado):
         else if (estado) {
-            // Regla: Puedes moverla si es tuya, si eres el jefe, o si eres el empleado asignado.
+            // Pueden moverla si es personal, si son los jefes o si es su tarea asignada
             if (!esPersonal && !soyJefe && !soyAsignado) {
                 return res.status(403).json({ error: 'No tienes permiso para cambiar el estado de esta tarea' });
             }
@@ -136,7 +146,7 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
     const idTarea = req.params.id;
     const userId = req.usuario.id;
 
-    // Verificamos quién eres antes de borrar
+    // Comprobamos quién intenta borrar la tarea
     db.query('SELECT t.*, gu.rol FROM tareas t LEFT JOIN grupo_usuarios gu ON t.grupo_id = gu.grupo_id AND gu.usuario_id = ? WHERE t.id = ?', [userId, idTarea], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Tarea no encontrada' });
 
@@ -144,7 +154,7 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
         const esPersonal = tarea.grupo_id === null;
         const soyJefe = tarea.rol === 'jefe';
 
-        // Regla estricta: Los empleados no pueden borrar tareas.
+        // Regla estricta: Los empleados normales no pueden borrar tareas
         if (!esPersonal && !soyJefe) {
             return res.status(403).json({ error: 'Solo el jefe de la empresa puede borrar tareas del equipo' });
         }
@@ -158,11 +168,11 @@ app.delete('/api/tareas/:id', verificarToken, (req, res) => {
 });
 
 // ==========================================
-// GEMINI CON FALLBACK DE MODELOS
+// GEMINI CON RESPALDO DE MODELOS
 // ==========================================
 
+// Función para llamar a Gemini intentando usar varios modelos por si alguno falla
 async function generarConFallback(prompt) {
-    // Cogemos tu clave AQ. directamente de Render (sin comillas)
     const geminiApiKey = process.env.GEMINI_API_KEY.replace(/['"]/g, '').trim();
 
     const modelos = [
@@ -174,16 +184,13 @@ async function generarConFallback(prompt) {
 
     for (const modelo of modelos) {
         try {
-            // URL LIMPIA: Ya no le pegamos el ?key= al final
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
-            // TRADUCCIÓN EXACTA DE TU CURL
             const respuesta = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // AQUÍ ESTÁ LA MAGIA: La cabecera exacta que exige tu clave AQ.
-                    'X-goog-api-key': geminiApiKey
+                    'X-goog-api-key': geminiApiKey 
                 },
                 body: JSON.stringify({
                     contents: [{
@@ -198,32 +205,32 @@ async function generarConFallback(prompt) {
                 const datos = JSON.parse(textoCrudo);
 
                 if (respuesta.ok) {
-                    console.log(`✅ Gemini respondió perfectamente usando ${modelo}`);
+                    console.log("Inferencia LLM resuelta usando: " + modelo);
                     return datos.candidates[0].content.parts[0].text;
                 }
 
-                console.warn(`🕵️‍♂️ Aviso en ${modelo}:`, datos.error);
+                console.warn("Alerta en modelo " + modelo + ":", datos.error);
             } catch (jsonError) {
-                console.error(`🕵️‍♂️ El servidor no devolvió JSON en ${modelo}. Respuesta cruda:`, textoCrudo.substring(0, 200));
+                console.error("Error al leer la respuesta en " + modelo + ":", textoCrudo.substring(0, 200));
             }
 
         } catch (error) {
-            console.error(`🕵️‍♂️ Error crítico de conexión en ${modelo}:`, error.message);
+            console.error("Fallo de red conectando con " + modelo + ":", error.message);
         }
     }
 
-    throw new Error("Todos los modelos Gemini están temporalmente ocupados.");
+    throw new Error("Todos los modelos Gemini están temporalmente inactivos.");
 }
 
-/// ==========================================
-// RUTA PARA EXTRAER Y ACTUALIZAR TAREAS POR VOZ (NLP) BLINDADA
+// ==========================================
+// RUTA PARA EXTRAER Y ACTUALIZAR TAREAS POR VOZ
 // ==========================================
 app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
     try {
         const { texto, estadoActual } = req.body;
         
+        // Preparamos la fecha de hoy para que la IA sepa qué día es
         const hoy = new Date();
-        // Le damos el contexto humano completo para que no falle al calcular "el próximo viernes"
         const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         const fechaContexto = hoy.toLocaleDateString('es-ES', opcionesFecha);
         const fechaIsoStr = hoy.toISOString().split('T')[0];
@@ -255,7 +262,7 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
 
         const textoGenerado = await generarConFallback(prompt);
 
-        // BLINDAJE ANTI-ALUCINACIONES: Buscamos el primer '{' y el último '}'
+        // Buscamos el inicio y fin del objeto JSON para evitar textos extraños de la IA
         const match = textoGenerado.match(/\{[\s\S]*\}/);
         
         if (!match) {
@@ -263,7 +270,6 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
         }
 
         const datosExtraidos = JSON.parse(match[0]);
-
         res.json(datosExtraidos);
         
     } catch (error) {
@@ -273,13 +279,13 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DEL DAILY BRIEFING (GEMINI + ELEVENLABS TTS)
+// RUTA DEL RESUMEN DIARIO CON VOZ (GEMINI + ELEVENLABS)
 // ==========================================
 app.post('/api/briefing', verificarToken, async (req, res) => {
     try {
         const { tareas, nombre } = req.body;
 
-        // 1. Limpieza y preparación de datos para el LLM
+        // 1. Preparamos las tareas para enviarlas a la IA de forma limpia
         const tareasLimpias = tareas.map(t => ({
             tarea: t.titulo,
             estado: t.estado,
@@ -288,7 +294,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
 
         const fechaHoy = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
 
-        // 2. Prompt optimizado para la redacción del guion
+        // 2. Instrucciones para que Gemini genere el texto a leer
         const prompt = `
         Actúa exclusivamente como Kora, un asistente personal de voz muy humano y profesional.
         Tu objetivo es leer el resumen del día para el usuario llamado ${nombre}. Hoy es ${fechaHoy}.
@@ -299,8 +305,6 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         -------------------
 
         INSTRUCCIONES DE VOZ (ESTRICTAS):
-        INSTRUCCIONES DE VOZ (ESTRICTAS):
-        INSTRUCCIONES DE VOZ (ESTRICTAS):
         1. Escribe un único párrafo de 3 a 5 frases fluidas.
         2. Usa lenguaje natural, conversacional, cercano y tutéame SIEMPRE (dirígete a mí de "tú", NUNCA de "usted").
         3. PROHIBIDO usar asteriscos, markdown, viñetas, guiones, emojis o caracteres especiales.
@@ -309,17 +313,15 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         6. PROHIBICIÓN ABSOLUTA: NO ofrezcas ayuda adicional, NO te ofrezcas a reorganizar la agenda, ni digas frases como "si lo necesitas puedo ayudarte". Limítate exclusivamente a dar los datos de las tareas y despedirte.
         `;
 
-        // 3. Llamada a Gemini para generar el guion de texto
+        // 3. Obtenemos el texto del guion
         const textoGenerado = await generarConFallback(prompt);
-
-
         console.log("Guion generado por Gemini:", textoGenerado);
 
-        // 4. LLAMADA DIRECTA A ELEVENLABS (Síntesis de voz neural) 
+        // 4. Llamamos a ElevenLabs para convertir el texto en audio
         const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
-        // Usamos una voz por defecto excelente en español (ID: 21m00Tcm4TlvDq8ikWAM - Rachel)
-        const voiceId = "jcjw6BGYhh9x3PXYUqlu";
+        const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
         const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
+        
         const respuestaEleven = await fetch(urlEleven, {
             method: 'POST',
             headers: {
@@ -328,7 +330,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             },
             body: JSON.stringify({
                 text: textoGenerado,
-                model_id: "eleven_multilingual_v2", // El mejor modelo para español
+                model_id: "eleven_multilingual_v2", 
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75
@@ -342,15 +344,14 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             return res.status(500).json({ error: "ElevenLabs no pudo procesar la voz." });
         }
 
-        // 5. Recibimos el audio binario (.mp3) desde ElevenLabs
+        // 5. Devolvemos el archivo de audio (.mp3) al usuario
         const audioBuffer = await respuestaEleven.arrayBuffer();
 
-        // Configuramos las cabeceras de Express para enviar un archivo de audio puro
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
 
     } catch (error) {
-        console.error("Fallo crítico en el pipeline de IA:", error);
+        console.error("Fallo general en la creación del audio:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });
@@ -368,6 +369,7 @@ app.get('/api/festivos', async (req, res) => {
         const datos = await respuesta.json();
 
         if (datos.meta.code === 200) {
+            // Traducimos los nombres de los festivos al español y filtramos los que nos interesan
             const traducciones = {
                 "New Year's Day": "Año Nuevo", "Epiphany": "Día de Reyes", "Valentine's Day": "San Valentín", "Carnival Monday": "Lunes de Carnaval", "Carnival Tuesday": "Martes de Carnaval", "Ash Wednesday": "Miércoles de Ceniza", "Father's Day": "Día del Padre", "San Jose": "Día del Padre", "Daylight Saving Time starts": "Cambio horario de verano", "Maundy Thursday": "Jueves Santo", "Good Friday": "Viernes Santo", "Holy Saturday": "Sábado Santo", "Easter Sunday": "Domingo Santo", "Easter Monday": "Lunes de Pascua", "Labor Day": "Día del Trabajador", "Mother's Day": "Día de la Madre", "Corpus Christi": "Corpus Christi", "Daylight Saving Time ends": "Cambio horario de invierno", "Assumption of Mary": "Asunción de la Virgen", "Hispanic Day": "Día de la Hispanidad", "All Saints' Day": "Día de Todos los Santos", "Constitution Day": "Constitución Española", "Immaculate Conception": "La Inmaculada Concepción", "Christmas Eve": "Nochebuena", "Christmas Day": "Navidad", "New Year's Eve": "Nochevieja"
             };
@@ -375,6 +377,7 @@ app.get('/api/festivos', async (req, res) => {
 
             const festivosProcesados = datos.response.holidays.map(festivo => ({ ...festivo, name: traducciones[festivo.name] || festivo.name })).filter(festivo => festivosQueMeInteresan.includes(festivo.name));
 
+            // Filtramos para asegurarnos de que no haya festivos repetidos
             const festivosSinDuplicados = [];
             const nombresVistos = new Set();
             for (const festivo of festivosProcesados) {
@@ -385,7 +388,7 @@ app.get('/api/festivos', async (req, res) => {
             }
             res.json(festivosSinDuplicados);
         } else { res.status(500).json({ error: 'Error en la API de Calendarific' }); }
-    } catch (error) { res.status(500).json({ error: 'Error interno conectando con Calendarific' }); }
+    } catch (error) { res.status(500).json({ error: 'Error interno conectando con API externa' }); }
 });
 
 // ==========================================
@@ -414,6 +417,7 @@ app.post('/api/tareas/:id/comentarios', verificarToken, (req, res) => {
     const { texto } = req.body;
     const usuarioId = req.usuario.id;
 
+    // Comprobamos que el comentario no esté vacío
     if (!texto || texto.trim() === '') return res.status(400).json({ error: 'El comentario no puede estar vacío' });
 
     const query = 'INSERT INTO comentarios (tarea_id, usuario_id, texto) VALUES (?, ?, ?)';
@@ -431,7 +435,7 @@ app.put('/api/comentarios/:id', verificarToken, (req, res) => {
 
     if (!texto || texto.trim() === '') return res.status(400).json({ error: 'El comentario no puede estar vacío' });
 
-    // Comprobar primero si el comentario es tuyo
+    // Comprobamos primero si el comentario pertenece a este usuario
     db.query('SELECT usuario_id FROM comentarios WHERE id = ?', [comentarioId], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Comentario no encontrado' });
 
@@ -439,7 +443,6 @@ app.put('/api/comentarios/:id', verificarToken, (req, res) => {
             return res.status(403).json({ error: 'Solo puedes editar tus propios comentarios' });
         }
 
-        // Si es tuyo, lo actualizamos
         db.query('UPDATE comentarios SET texto = ? WHERE id = ?', [texto, comentarioId], (err) => {
             if (err) return res.status(500).json({ error: 'Error al actualizar el comentario' });
             res.json({ mensaje: 'Comentario actualizado correctamente' });
@@ -460,7 +463,7 @@ app.post('/api/vacaciones', verificarToken, (req, res) => {
 
     db.query('INSERT INTO vacaciones (usuario_id, grupo_id, fecha_inicio, fecha_fin) VALUES (?, ?, ?, ?)', [usuario_id, grupo_id, fecha_inicio, fecha_fin], (err) => {
         if (err) return res.status(500).json({ error: 'Error al registrar vacaciones' });
-        res.json({ mensaje: 'Ausencia registrada correctamente en el calendario del equipo' });
+        res.json({ mensaje: 'Ausencia registrada correctamente' });
     });
 });
 
@@ -486,7 +489,7 @@ app.delete('/api/vacaciones/:id', verificarToken, (req, res) => {
     const vacacionId = req.params.id;
     const usuarioId = req.usuario.id;
 
-    // Verificamos que la vacación exista y sea del usuario
+    // Verificamos que la vacación exista y pertenezca al usuario
     db.query('SELECT usuario_id FROM vacaciones WHERE id = ?', [vacacionId], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ error: 'Vacación no encontrada' });
 
@@ -501,6 +504,7 @@ app.delete('/api/vacaciones/:id', verificarToken, (req, res) => {
     });
 });
 
+// Arrancamos el servidor en el puerto configurado
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor del backend corriendo en el puerto ${PORT}`);

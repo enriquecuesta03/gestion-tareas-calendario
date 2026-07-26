@@ -1,5 +1,20 @@
+/*********************************************************************************
+Archivo de estilos base generales.
+Aquí se definen las reglas básicas de diseño visual para toda la aplicación. 
+Estas primeras líneas aseguran que todos los elementos de la página partan 
+de cero, eliminando los márgenes y espacios que los navegadores añaden 
+por defecto, para que el diseño cuadre a la perfección.
+***********************************************************************************/
+
+/* El asterisco funciona como un comodín para seleccionar absolutamente todos los elementos de la página */
 * {
+  /* Obliga a que los bordes y espacios internos se calculen dentro del tamaño total del elemento, 
+     evitando que las cajas se hagan más grandes de lo que queremos y rompan el diseño */
   box-sizing: border-box;
+  
+  /* Elimina el espacio exterior que separa a los elementos entre sí por defecto */
   margin: 0;
+  
+  /* Elimina el espacio interior de relleno por defecto */
   padding: 0;
 }

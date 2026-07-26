@@ -1,32 +1,46 @@
+/*********************************************************************************
+Archivo de gestión de usuarios y seguridad (auth.js).
+Aquí se controla quién puede entrar a la aplicación. Se encarga de revisar 
+las contraseñas, crear cuentas nuevas, gestionar el inicio de sesión con 
+Google o GitHub, y proteger los datos personales para que nadie sin permiso 
+pueda verlos o modificarlos.
+***********************************************************************************/
+
 const express = require('express');
-const bcrypt = require('bcryptjs'); 
-const jwt = require('jsonwebtoken'); 
-const { OAuth2Client } = require('google-auth-library'); 
+const bcrypt = require('bcryptjs'); // Herramienta para encriptar y ocultar contraseñas
+const jwt = require('jsonwebtoken'); // Herramienta para crear llaves de acceso temporales (tokens)
+const { OAuth2Client } = require('google-auth-library'); // Herramienta para conectarnos con Google
 const db = require('../db'); 
 
 const router = express.Router(); 
+// La contraseña maestra del servidor para firmar las llaves de acceso
 const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
 
+// Identificador público de nuestra aplicación en los servidores de Google
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com'; 
 
 // ===================================================================
-// IMPORTANTE: PON AQUÍ TUS CLAVES DE GITHUB 
+// Identificadores para conectarnos con los servidores de GitHub
 // ===================================================================
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || 'Ov23liHuJKItfZMT9Qks';
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '12a2c323743e5c3e2649fab305b6f369de1ae0e9';
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// --- REGISTRO TRADICIONAL ---
+// Recibe los datos del formulario, oculta la contraseña por seguridad y guarda al usuario en la base de datos
 router.post('/registro', async (req, res) => {
     const { nombre, email, password, fecha_nacimiento } = req.body;
     
     try {
+        // Encriptamos la contraseña para no guardarla en texto plano
         const salt = await bcrypt.genSalt(10);
         const passwordHasheada = await bcrypt.hash(password, salt);
 
         const query = 'INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, fecha_creacion) VALUES (?, ?, ?, ?, NOW())';
         db.query(query, [nombre, email, passwordHasheada, fecha_nacimiento], (err, resultado) => {
             if (err) {
+                // Si el error es porque el correo ya existe, avisamos al usuario
                 if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'El email ya esta registrado' });
                 return res.status(500).json({ error: 'Error al registrar usuario' });
             }
@@ -37,28 +51,32 @@ router.post('/registro', async (req, res) => {
     }
 });
 
+// --- INICIO DE SESIÓN TRADICIONAL ---
+// Comprueba que el correo exista y que la contraseña coincida con la que tenemos guardada
 router.post('/login', (req, res) => {
     const { email, password } = req.body;
 
-    // ARREGLO: Uso de backticks (`) y comillas simples (') para la fecha
+    // Buscamos al usuario y le damos un formato limpio a su fecha de nacimiento
     db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
         if (err) {
-            console.error("🕵️‍♂️ ERROR SQL EN LOGIN:", err);
+            console.error("ERROR SQL EN LOGIN:", err);
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
         if (resultados.length === 0) {
-            console.log(`🕵️‍♂️ FALLO LOGIN: El email ${email} no existe en la BD`);
+            console.log(`FALLO LOGIN: El email ${email} no existe en la BD`);
             return res.status(401).json({ error: 'Email o contrasena incorrectos' });
         }
 
         const usuario = resultados[0];
         
+        // Comparamos la contraseña que ha escrito con la que tenemos encriptada
         const passCorrecta = await bcrypt.compare(password, usuario.password);
         if (!passCorrecta) {
             console.log(`FALLO LOGIN: Contraseña incorrecta para ${email}.`);
             return res.status(401).json({ error: 'Email o contrasena incorrectos' });
         }
 
+        // Si todo es correcto, le creamos una llave de acceso que durará 24 horas
         const token = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
         
         console.log(`LOGIN EXITOSO: Bienvenido ${usuario.nombre}`);
@@ -71,29 +89,33 @@ router.post('/login', (req, res) => {
     });
 });
 
-// --- RUTA DE GOOGLE ---
+// --- INICIO DE SESIÓN CON GOOGLE ---
+// Google nos envía un comprobante. Si es válido, dejamos pasar al usuario.
 router.post('/google', async (req, res) => {
     const { token, fecha_nacimiento } = req.body;
 
     try {
+        // Verificamos con Google que el comprobante sea real
         const ticket = await client.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
         const payload = ticket.getPayload();
         const email = payload.email;
         const nombre = payload.name;
 
-        // ARREGLO: Uso de backticks (`) y comillas simples (')
         db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
 
             if (resultados.length > 0) {
+                // Si el usuario ya estaba registrado en nuestro sistema, le damos la llave y le dejamos entrar
                 const usuario = resultados[0];
                 const jwtToken = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
                 return res.json({ mensaje: 'Login de Google exitoso', token: jwtToken, nombre: usuario.nombre, fecha_nacimiento: usuario.fecha_nac_limpia });
             } else {
+                // Si es la primera vez que entra con Google y no tenemos su fecha, se la pedimos
                 if (!fecha_nacimiento) {
                     return res.status(206).json({ mensaje: 'Se requiere fecha de nacimiento', requiereFecha: true, email: email, nombre: nombre });
                 }
 
+                // Creamos una contraseña aleatoria porque siempre va a usar Google para entrar
                 const randomPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
                 const queryInsert = 'INSERT INTO usuarios (nombre, email, password, fecha_nacimiento, fecha_creacion) VALUES (?, ?, ?, ?, NOW())';
                 
@@ -111,7 +133,8 @@ router.post('/google', async (req, res) => {
     }
 });
 
-// --- RUTA 1 DE GITHUB (Intercambio de código) ---
+// --- INICIO DE SESIÓN CON GITHUB (Paso 1) ---
+// Intercambiamos el código que nos da GitHub por los datos del usuario
 router.post('/github', async (req, res) => {
     const { code } = req.body;
 
@@ -126,6 +149,7 @@ router.post('/github', async (req, res) => {
 
         if (!accessToken) return res.status(400).json({ error: 'Código de autorización de GitHub inválido' });
 
+        // Con el permiso de GitHub, pedimos el perfil y el correo principal del usuario
         const userResponse = await fetch('https://api.github.com/user', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
@@ -140,7 +164,6 @@ router.post('/github', async (req, res) => {
         const email = primaryEmailObj.email;
         const nombre = userData.name || userData.login;
 
-        // ARREGLO: Uso de backticks (`) y comillas simples (')
         db.query(`SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE email = ?`, [email], async (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
 
@@ -149,6 +172,7 @@ router.post('/github', async (req, res) => {
                 const jwtToken = jwt.sign({ id: usuario.id, nombre: usuario.nombre }, JWT_SECRET, { expiresIn: '24h' });
                 return res.json({ mensaje: 'Login de GitHub exitoso', token: jwtToken, nombre: usuario.nombre, fecha_nacimiento: usuario.fecha_nac_limpia });
             } else {
+                // Si es nuevo, creamos una llave temporal corta y le pedimos la fecha de nacimiento en la pantalla
                 const tempToken = jwt.sign({ email, nombre, provider: 'github' }, JWT_SECRET, { expiresIn: '15m' });
                 return res.status(206).json({ 
                     mensaje: 'Se requiere fecha de nacimiento', 
@@ -165,11 +189,13 @@ router.post('/github', async (req, res) => {
     }
 });
 
-// --- RUTA 2 DE GITHUB (Completar Registro con Fecha) ---
+// --- INICIO DE SESIÓN CON GITHUB (Paso 2) ---
+// Finaliza el registro guardando la fecha de nacimiento que faltaba
 router.post('/github-complete', async (req, res) => {
     const { tempToken, fecha_nacimiento } = req.body;
 
     try {
+        // Comprobamos que la llave temporal sea válida y siga activa
         const decoded = jwt.verify(tempToken, JWT_SECRET);
         if (decoded.provider !== 'github') throw new Error('Proveedor inválido');
         
@@ -189,7 +215,7 @@ router.post('/github-complete', async (req, res) => {
     }
 });
 
-// --- RUTA PARA CAMBIAR CONTRASEÑA ---
+// --- CAMBIO DE CONTRASEÑA ---
 router.put('/cambiar-password', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -207,6 +233,7 @@ router.put('/cambiar-password', async (req, res) => {
 
             const usuario = resultados[0];
 
+            // Comprobamos que recuerde su contraseña antigua antes de dejarle poner una nueva
             const passCorrecta = await bcrypt.compare(passwordActual, usuario.password);
             if (!passCorrecta) return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
 
@@ -224,7 +251,7 @@ router.put('/cambiar-password', async (req, res) => {
     }
 });
 
-// --- OBTENER DATOS DEL PERFIL ---
+// --- VER DATOS DEL PERFIL ---
 router.get('/perfil', (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -233,7 +260,6 @@ router.get('/perfil', (req, res) => {
     try {
         const verificado = jwt.verify(token, JWT_SECRET);
         
-        // ARREGLO: Uso de backticks (`) y comillas simples (')
         db.query(`SELECT nombre, email, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') as fecha_nac_limpia FROM usuarios WHERE id = ?`, [verificado.id], (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -244,7 +270,7 @@ router.get('/perfil', (req, res) => {
     }
 });
 
-// --- ACTUALIZAR DATOS DEL PERFIL ---
+// --- MODIFICAR DATOS DEL PERFIL ---
 router.put('/perfil', async (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -255,6 +281,7 @@ router.put('/perfil', async (req, res) => {
         const usuarioId = verificado.id;
         const { nombre, email, fecha_nacimiento } = req.body;
 
+        // Primero nos aseguramos de que no esté intentando ponerse el correo de otro usuario
         db.query('SELECT id FROM usuarios WHERE email = ? AND id != ?', [email, usuarioId], (err, resultados) => {
             if (err) return res.status(500).json({ error: 'Error en la base de datos' });
             if (resultados.length > 0) return res.status(400).json({ error: 'Ese email ya está registrado en otra cuenta' });
@@ -263,6 +290,7 @@ router.put('/perfil', async (req, res) => {
             db.query(queryUpdate, [nombre, email, fecha_nacimiento, usuarioId], (err, resultado) => {
                 if (err) return res.status(500).json({ error: 'Error al actualizar el perfil' });
 
+                // Como ha cambiado de datos, le damos una llave nueva actualizada
                 const nuevoToken = jwt.sign({ id: usuarioId, nombre: nombre }, JWT_SECRET, { expiresIn: '24h' });
                 
                 res.json({ mensaje: 'Perfil actualizado', token: nuevoToken, nombre, fecha_nacimiento });
@@ -272,4 +300,5 @@ router.put('/perfil', async (req, res) => {
         res.status(401).json({ error: 'Token inválido' });
     }
 });
+
 module.exports = router;

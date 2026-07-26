@@ -1,37 +1,57 @@
+/*********************************************************************************
+Pantalla de gestión de perfil y cuenta (Perfil).
+Aquí el usuario puede ver su información personal, cambiar su contraseña, 
+unirse a una empresa o crear una nueva. También permite registrar los días 
+de vacaciones para que el resto del equipo sepa cuándo no está disponible.
+***********************************************************************************/
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
+
+// Importamos las herramientas para manejar las tareas y el asistente de voz
 import { useTareas } from '../hooks/useTareas';
 import { useKoraAI } from '../hooks/useKoraAI';
 
 function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
 
+  // Dirección de nuestro servidor para enviar y recibir los datos
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
+  // Guardamos la información actual del usuario y controlamos si la página está cargando
   const [datosUsuario, setDatosUsuario] = useState({ nombre: '', email: '', fecha_nac_limpia: '' });
   const [cargando, setCargando] = useState(true);
+  
+  // Controlamos qué pestaña está viendo el usuario (información, editar, seguridad o empresas)
   const [vistaActiva, setVistaActiva] = useState('info'); 
   const [menuAbierto, setMenuAbierto] = useState(false); 
   
+  // Guardamos los datos temporales cuando el usuario está escribiendo para editarlos
   const [editNombre, setEditNombre] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editFechaNac, setEditFechaNac] = useState('');
+  
+  // Variables para la pantalla de cambiar contraseña
   const [passwordActual, setPasswordActual] = useState('');
   const [nuevaPassword, setNuevaPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
+  
+  // Para mostrar mensajes de éxito o error por pantalla
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
+  // Variables para la gestión de las empresas y grupos
   const [misGrupos, setMisGrupos] = useState([]);
   const [nombreNuevoGrupo, setNombreNuevoGrupo] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
 
+  // Variables para registrar cuándo nos vamos de vacaciones
   const [vacacionGrupoId, setVacacionGrupoId] = useState('');
   const [vacacionInicio, setVacacionInicio] = useState('');
   const [vacacionFin, setVacacionFin] = useState('');
 
   // ==========================================
-  // IA, TAREAS Y ALERTAS (USANDO TUS HOOKS)
+  // ASISTENTE DE VOZ Y ALERTAS DE TAREAS
   // ==========================================
   const { tareas } = useTareas(token, onLogout);
   
@@ -42,26 +62,31 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       formulariosActions: { estadoActual: {} } 
   });
 
+  // Filtramos las tareas para saber cuáles ya han llegado a su fecha de aviso
   const notificacionesPendientes = tareas.filter(tarea => {
       if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
       return Date.now() >= new Date(tarea.fecha_notificacion).getTime();
   });
   // ==========================================
 
+  // Función para pedirle al servidor en qué empresas trabaja el usuario
   const cargarMisGrupos = () => {
     fetch(`${API_URL}/api/grupos`, { headers: { 'Authorization': `Bearer ${token}` }})
     .then(res => res.json()).then(data => setMisGrupos(Array.isArray(data) ? data : []));
   };
 
+  // Nada más abrir la pantalla, le pedimos al servidor todos los datos del perfil
   useEffect(() => {
     fetch(`${API_URL}/api/perfil`, { headers: { 'Authorization': `Bearer ${token}` }})
     .then(res => res.json())
     .then(data => {
       setDatosUsuario(data); setEditNombre(data.nombre); setEditEmail(data.email); setEditFechaNac(data.fecha_nac_limpia); setCargando(false);
     }).catch(() => setCargando(false));
+    
     cargarMisGrupos();
   }, [token]);
 
+  // Función para guardar los nuevos datos personales si el usuario los cambia
   const manejarActualizarPerfil = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
     fetch(`${API_URL}/api/perfil`, {
@@ -72,17 +97,22 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       if (status === 200) {
         setMensaje({ texto: 'Datos actualizados correctamente.', tipo: 'exito' });
         setDatosUsuario({ nombre: body.nombre, email: editEmail, fecha_nac_limpia: body.fecha_nacimiento });
+        
+        // Actualizamos la memoria del navegador para que la aplicación muestre el nuevo nombre
         localStorage.setItem('token', body.token); 
         localStorage.setItem('nombreUsuario', body.nombre);
         localStorage.setItem('fechaNacUsuario', body.fecha_nacimiento);
+        
         setTimeout(() => window.location.reload(), 1500);
       } else { setMensaje({ texto: body.error, tipo: 'error' }); }
     });
   };
 
+  // Función para cambiar la contraseña asegurándonos de que las dos nuevas coincidan
   const manejarCambioPassword = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
     if (nuevaPassword !== confirmarPassword) return setMensaje({ texto: 'Las contraseñas no coinciden', tipo: 'error' });
+    
     fetch(`${API_URL}/api/cambiar-password`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ passwordActual, nuevaPassword })
@@ -95,6 +125,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
     });
   };
 
+  // Función para crear una empresa nueva desde cero
   const manejarCrearGrupo = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
     fetch(`${API_URL}/api/grupos`, {
@@ -105,6 +136,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
     });
   };
 
+  // Función para entrar en una empresa que ya existe usando el código secreto
   const manejarUnirseGrupo = (e) => {
     e.preventDefault(); setMensaje({ texto: '', tipo: '' });
     fetch(`${API_URL}/api/grupos/unirse`, {
@@ -115,6 +147,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
     });
   };
 
+  // Función para avisar de que no vamos a estar disponibles unos días
   const manejarCrearVacacion = (e) => {
       e.preventDefault(); setMensaje({ texto: '', tipo: '' });
       if (vacacionFin < vacacionInicio) return setMensaje({ texto: 'La fecha de fin no puede ser anterior a la de inicio', tipo: 'error' });
@@ -134,11 +167,13 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
       });
   };
 
+  // Si estamos cargando datos, mostramos este texto de espera
   if (cargando) return <div className="app-layout"><main className="main-content">Cargando...</main></div>;
 
   return (
     <div className="app-layout">
       
+      {/* Estilos de diseño integrados para que los botones y tarjetas se vean perfectos en el perfil */}
       <style>{`
         .perfil-tab-btn {
           background: transparent; border: none; text-align: left; padding: 12px 16px;
@@ -178,6 +213,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
         .native-btn:hover { background-color: var(--accent-green-hover); }
 
+        /* Adaptación para pantallas de teléfonos móviles */
         @media (max-width: 768px) {
           .main-content { overflow-x: hidden !important; width: 100vw !important; padding: 15px !important; box-sizing: border-box !important; }
           .contenedor-perfil { flex-direction: column !important; gap: 15px !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
@@ -219,7 +255,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         }
       `}</style>
 
-      {/* AQUÍ MATAMOS EL FILTRO: Le enviamos la prop mostrarFiltro={false} al Sidebar */}
+      {/* Menú lateral (Le decimos que aquí no hace falta mostrar el selector de empresas) */}
       <Sidebar 
           mostrarFiltro={false}
           onVerPerfil={() => {}} 
@@ -239,6 +275,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
           setMenuAbierto={setMenuAbierto}
       />
 
+      {/* Cabecera para teléfonos móviles */}
       <header className="mobile-header">
           <button className="mobile-menu-btn" onClick={() => setMenuAbierto(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -260,6 +297,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
           <div className="contenedor-perfil" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap', width: '100%' }}>
             
+            {/* Lista de pestañas de la izquierda */}
             <div className="menu-perfil-movil" style={{ flex: '1', minWidth: '220px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               
               <button onClick={() => {setVistaActiva('info'); setMensaje({texto:'', tipo:''})}} className={`perfil-tab-btn ${vistaActiva === 'info' ? 'active' : ''}`}>
@@ -286,6 +324,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
             <div className="panel-contenido-perfil fade-in-section" key={vistaActiva} style={{ flex: '3', minWidth: '0', width: '100%', backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
                 
+                {/* Cuadro para mostrar si algo ha salido bien o mal al guardar datos */}
                 {mensaje.texto && (
                     <div style={{ padding: '15px', marginBottom: '25px', borderRadius: '12px', backgroundColor: mensaje.tipo === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: mensaje.tipo === 'error' ? 'var(--danger-color)' : 'var(--accent-green)', fontWeight: '500', border: `1px solid ${mensaje.tipo === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
                       {mensaje.tipo === 'exito' && <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>}
@@ -293,6 +332,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                     </div>
                 )}
 
+                {/* PESTAÑA 1: Ver nuestra información general */}
                 {vistaActiva === 'info' && (
                   <div className="native-card">
                     <h2 className="section-title" style={{ borderBottom: 'none', marginBottom: '25px' }}>Perfil del Usuario</h2>
@@ -314,6 +354,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                   </div>
                 )}
 
+                {/* PESTAÑA 2: Editar nuestros datos personales */}
                 {vistaActiva === 'editar' && (
                   <div className="native-card">
                     <h2 className="section-title">Actualizar Datos</h2>
@@ -338,6 +379,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                   </div>
                 )}
 
+                {/* PESTAÑA 3: Cambiar la contraseña */}
                 {vistaActiva === 'password' && (
                   <div className="native-card">
                     <h2 className="section-title">Seguridad</h2>
@@ -362,6 +404,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                   </div>
                 )}
 
+                {/* PESTAÑA 4: Gestionar nuestras empresas y las vacaciones */}
                 {vistaActiva === 'empresas' && (
                   <div>
                     <div className="native-card">
@@ -391,6 +434,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                         )}
                     </div>
 
+                    {/* Botones para unirnos a una empresa con un código o crear la nuestra propia */}
                     <div className="grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'minmax(min(100%, 250px), 1fr)', gap: '20px', marginBottom: '20px' }}>
                         <div className="native-card" style={{ marginBottom: 0 }}>
                             <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '20px' }}>Unirse a Equipo</h3>
@@ -408,6 +452,7 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                         </div>
                     </div>
 
+                    {/* Formulario para registrar las vacaciones y bloquearlas en el calendario del equipo */}
                     <div className="native-card">
                         <h3 style={{ marginTop: 0, fontSize: '1.1rem', marginBottom: '10px' }}>Notificar Ausencia / Vacaciones</h3>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '25px' }}>Bloquea días en el calendario para que tu equipo sepa que no estás disponible.</p>

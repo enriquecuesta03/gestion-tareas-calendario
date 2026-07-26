@@ -1,3 +1,11 @@
+/*********************************************************************************
+Ventana emergente de detalles de la tarea (TaskDetailModal).
+Este archivo dibuja el recuadro que aparece cuando hacemos clic en una 
+tarea para ver toda su información. Muestra el título, la descripción, 
+las fechas y un historial de notas o comentarios donde el equipo puede 
+hablar y dejar apuntes.
+***********************************************************************************/
+
 import React from 'react';
 
 function TaskDetailModal({
@@ -6,16 +14,23 @@ function TaskDetailModal({
     textoComentarioEditado, setTextoComentarioEditado, setComentarioEnEdicionId,
     enviarComentario, nuevoComentario, setNuevoComentario
 }) {
+    // Si la ventana debe estar cerrada o no hay ninguna tarea seleccionada, no dibujamos nada
     if (!isOpen || !tareaEnVista) return null;
 
     return (
+        // Fondo oscuro y borroso que tapa el resto de la aplicación para que nos centremos en la ventana
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            
+            {/* Caja principal de la ventana con barra de desplazamiento interna por si hay muchos comentarios */}
             <div style={{ backgroundColor: 'var(--bg-card)', padding: '30px', width: '100%', maxWidth: '600px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                
+                {/* Cabecera con el título principal y el botón de cerrar ("X") */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-main)' }}>Detalles de la Tarea</h2>
                     <button onClick={() => setTareaEnVista(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}>&times;</button>
                 </div>
                 
+                {/* Zona central con toda la información de la tarea */}
                 <div style={{ overflowY: 'auto', flex: 1, paddingRight: '10px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', color: 'var(--text-main)', marginBottom: '30px' }}>
                         <div>
@@ -45,9 +60,12 @@ function TaskDetailModal({
                         </div>
                     </div>
                     
+                    {/* Sección inferior dedicada al historial de actividad y los comentarios */}
                     <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
                         <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '15px' }}>Actividad y Notas</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                            
+                            {/* Si no hay comentarios, mostramos un mensaje de aviso. Si hay, mostramos la lista completa */}
                             {comentarios.length === 0 ? (
                                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No hay comentarios todavía.</p> 
                             ) : (
@@ -56,12 +74,16 @@ function TaskDetailModal({
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                             <div>
                                                 <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{c.autor}</span>
+                                                
+                                                {/* Si el comentario es nuestro, nos da la opción de editarlo para corregir errores */}
                                                 {c.autor === nombreUsuario && comentarioEnEdicionId !== c.id && (
                                                     <button onClick={() => iniciarEdicionComentario(c)} style={{ background: 'none', border: 'none', color: 'var(--accent-green)', fontSize: '0.75rem', cursor: 'pointer', marginLeft: '10px', padding: 0, fontWeight: '600' }}>Editar</button>
                                                 )}
                                             </div>
                                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(c.fecha_creacion).toLocaleString()}</span>
                                         </div>
+                                        
+                                        {/* Si le damos a editar, cambiamos el texto por una cajita para escribir y los botones de guardar o cancelar */}
                                         {comentarioEnEdicionId === c.id ? (
                                             <form onSubmit={(e) => guardarEdicionComentario(e, c.id)} style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                                 <input type="text" value={textoComentarioEditado} onChange={(e) => setTextoComentarioEditado(e.target.value)} style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem' }} autoFocus />
@@ -75,12 +97,16 @@ function TaskDetailModal({
                                 ))
                             )}
                         </div>
+                        
+                        {/* Formulario de la parte baja para escribir y enviar un comentario nuevo */}
                         <form onSubmit={enviarComentario} style={{ display: 'flex', gap: '10px' }}>
                             <input type="text" required placeholder="Escribe una nota o comentario..." value={nuevoComentario} onChange={(e) => setNuevoComentario(e.target.value)} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)' }} />
                             <button type="submit" className="btn-add" style={{ padding: '10px 20px' }}>Enviar</button>
                         </form>
                     </div>
                 </div>
+                
+                {/* Botón final en la parte inferior por si queremos modificar los datos principales de la tarea */}
                 <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
                     <button onClick={() => { setTareaEnVista(null); editarTarea(tareaEnVista); }} className="btn-action" style={{ width: '100%', fontWeight: '600' }}>Editar Tarea</button>
                 </div>

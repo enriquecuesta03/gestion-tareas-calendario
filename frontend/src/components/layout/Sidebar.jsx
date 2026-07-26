@@ -1,7 +1,15 @@
+/*********************************************************************************
+Menú lateral de navegación (Sidebar).
+Esta es la barra que aparece a la izquierda de la pantalla. Contiene los enlaces 
+para moverse entre el tablero, las estadísticas y el perfil. También incluye los 
+botones para el resumen por voz, las alertas, el filtro de empresas, el cambio 
+de tema (claro/oscuro) y la opción de cerrar sesión.
+***********************************************************************************/
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// RUTA DE ESTILOS
+// Importamos los estilos de diseño específicos para esta barra lateral
 import '../../assets/styles/DashboardLayout.css';
 
 function Sidebar({ 
@@ -22,15 +30,19 @@ function Sidebar({
     setMenuAbierto,
     mostrarFiltro = true
 }) {
+    // Controlamos si la caja de notificaciones está abierta o cerrada
     const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
+    
+    // Herramientas para movernos de una pantalla a otra y saber dónde estamos
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Helper para saber en qué URL estamos y pintar el botón activo
+    // Función para saber en qué pantalla estamos y poder marcar el botón correspondiente
     const isActive = (path) => location.pathname.includes(path);
 
     return (
         <>
+            {/* Fondo oscuro que aparece en móviles cuando el menú está abierto. Si haces clic, se cierra */}
             <div 
                 className={`sidebar-overlay ${menuAbierto ? 'open' : ''}`} 
                 onClick={() => setMenuAbierto(false)}
@@ -38,6 +50,7 @@ function Sidebar({
 
             <aside className={`sidebar ${menuAbierto ? 'open' : ''}`}>
                 
+                {/* Cabecera del menú con el nombre de la aplicación y el botón para cerrarlo en móviles */}
                 <div style={{ flex: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div className="sidebar-brand" style={{ fontSize: '1.8rem', letterSpacing: '-1px', margin: 0, border: 'none' }}>
                         Kora<span style={{ color: 'var(--accent-green)' }}>.</span>
@@ -47,8 +60,10 @@ function Sidebar({
                     </button>
                 </div>
                 
+                {/* Zona con barra de desplazamiento para los enlaces principales */}
                 <div className="sidebar-scroll-area">
                     <nav className="sidebar-nav">
+                        {/* Botón para ir al Tablero */}
                         <button 
                             className={isActive('/dashboard/tablero') ? 'active' : ''} 
                             onClick={() => { navigate('/dashboard/tablero'); setMenuAbierto(false); }} 
@@ -62,6 +77,7 @@ function Sidebar({
                             Tablero Operativo
                         </button>
                         
+                        {/* Botón para ir a los Gráficos */}
                         <button 
                             className={isActive('/dashboard/metricas') ? 'active' : ''} 
                             onClick={() => { navigate('/dashboard/metricas'); setMenuAbierto(false); }} 
@@ -74,6 +90,7 @@ function Sidebar({
                             Análisis y Métricas
                         </button>
                         
+                        {/* Botón para ir al Perfil */}
                         <button 
                             className={isActive('/perfil') ? 'active' : ''}
                             onClick={() => { onVerPerfil(); setMenuAbierto(false); }} 
@@ -86,6 +103,7 @@ function Sidebar({
                             Gestión de Cuenta
                         </button>
 
+                        {/* Botón especial para pedirle el resumen del día a la Inteligencia Artificial */}
                         <div style={{ marginTop: '10px' }}>
                             <button 
                                 onClick={reproducirResumen} 
@@ -106,6 +124,7 @@ function Sidebar({
                                     fontSize: '0.95rem' 
                                 }}
                             >
+                                {/* Cambiamos el texto y el icono dependiendo de si está cargando, hablando o en reposo */}
                                 {procesando ? (
                                     <>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -136,6 +155,7 @@ function Sidebar({
                             </button>
                         </div>
 
+                        {/* Botón para ver las notificaciones de tareas pendientes */}
                         <div style={{ position: 'relative', marginTop: '10px' }}>
                             <button 
                                 onClick={() => setMostrarNotificaciones(!mostrarNotificaciones)} 
@@ -161,6 +181,7 @@ function Sidebar({
                                     </svg>
                                     Alertas
                                 </div>
+                                {/* Si hay notificaciones, mostramos un pequeño globo rojo con la cantidad */}
                                 {notificacionesPendientes.length > 0 && (
                                     <span style={{ 
                                         background: 'var(--danger-color)', 
@@ -179,6 +200,7 @@ function Sidebar({
                                 )}
                             </button>
                             
+                            {/* Caja desplegable con la lista de notificaciones */}
                             {mostrarNotificaciones && (
                                 <div style={{ position: 'absolute', top: '100%', left: '10px', width: '250px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '15px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 100 }}>
                                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', color: 'var(--text-main)' }}>
@@ -207,7 +229,7 @@ function Sidebar({
                         </div>
                     </nav>
                     
-                    {/* AQUÍ ESTÁ LA CONDICIÓN FÍSICA PARA MATAR EL FILTRO */}
+                    {/* Condición para mostrar u ocultar el filtro de grupos según la pantalla */}
                     {mostrarFiltro && (
                         <div style={{ padding: '0 20px', marginTop: '20px' }}>
                             <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
@@ -228,7 +250,9 @@ function Sidebar({
                     )}
                 </div>
                 
+                {/* Zona fija en la parte inferior de la barra lateral */}
                 <div className="sidebar-footer-fixed">
+                    {/* Botón para cambiar entre el tema oscuro y el claro */}
                     <div className="theme-switch-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
                         <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Tema Oscuro</span>
                         <label className="theme-switch">
@@ -237,6 +261,7 @@ function Sidebar({
                         </label>
                     </div>
                     
+                    {/* Información del usuario con la inicial de su nombre */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 20px' }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--text-main)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1rem' }}>
                             {nombreUsuario ? nombreUsuario.charAt(0).toUpperCase() : 'U'}
@@ -246,6 +271,7 @@ function Sidebar({
                         </span>
                     </div>
 
+                    {/* Botón para cerrar sesión */}
                     <div style={{ padding: '0 20px' }}>
                         <button 
                             onClick={onLogout} 

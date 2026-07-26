@@ -1,25 +1,31 @@
-// src/services/api.js
+/*********************************************************************************
+Archivo de conexión con el servidor (api.js).
+Aquí están guardadas todas las peticiones que hace la página web para hablar 
+con el backend. Centraliza la dirección del servidor y añade automáticamente 
+la "llave" (token) de seguridad a cada petición para no tener que escribirla 
+manualmente cada vez que pedimos o enviamos datos.
+***********************************************************************************/
 
-// Centralizamos la URL maestra. Al subirlo a producción, solo cambiaremos esta línea.
+// Guardamos la dirección principal del servidor. Si subimos la web a internet, solo hay que cambiar esto.
 const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.54:3000';
 
-// Helper inteligente para no repetir los headers de autorización en cada maldita llamada
+// Función auxiliar para preparar los datos de envío y añadir el token de seguridad si el usuario ha iniciado sesión
 const getHeaders = (token) => {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
 };
 
-// Exportamos un objeto con todas las operaciones de la app
+// Agrupamos todas las operaciones que se comunican con el servidor en un solo bloque
 export const api = {
-    // --- AUTENTICACIÓN ---
+    // --- INICIO DE SESIÓN Y REGISTRO ---
     login: (email, password) => 
         fetch(`${API_URL}/api/login`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ email, password }) }),
     
     registro: (datos) => 
         fetch(`${API_URL}/api/registro`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(datos) }),
 
-    // --- TAREAS ---
+    // --- GESTIÓN DE TAREAS ---
     obtenerTareas: (token) => 
         fetch(`${API_URL}/api/tareas`, { headers: getHeaders(token) }),
         
@@ -32,19 +38,20 @@ export const api = {
     borrarTarea: (token, id) => 
         fetch(`${API_URL}/api/tareas/${id}`, { method: 'DELETE', headers: getHeaders(token) }),
 
-    // --- INTELIGENCIA ARTIFICIAL Y VOZ ---
+    // --- INTELIGENCIA ARTIFICIAL Y ASISTENTE DE VOZ ---
     reproducirResumen: (token, tareas, nombre) => 
         fetch(`${API_URL}/api/briefing`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify({ tareas, nombre }) }),
         
     extraerDatosVoz: (token, texto, estadoActual) => 
         fetch(`${API_URL}/api/extraer-tarea`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify({ texto, estadoActual }) }),
 
-    // --- OTROS DATOS (Grupos, Festivos, Vacaciones) ---
+    // --- GRUPOS, FESTIVOS Y VACACIONES ---
     obtenerGrupos: (token) => 
         fetch(`${API_URL}/api/grupos`, { headers: getHeaders(token) }),
         
+    // Las peticiones a APIs de festivos públicos normalmente no necesitan nuestra llave de seguridad
     obtenerFestivos: () => 
-        fetch(`${API_URL}/api/festivos`), // (Normalmente las APIs públicas no llevan token)
+        fetch(`${API_URL}/api/festivos`), 
         
     obtenerVacaciones: (token) => 
         fetch(`${API_URL}/api/vacaciones`, { headers: getHeaders(token) }),
