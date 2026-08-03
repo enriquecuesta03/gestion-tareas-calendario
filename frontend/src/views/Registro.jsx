@@ -117,7 +117,10 @@ function Registro({ onLogin }) {
                   <h2 style={{ textAlign: 'center', color: 'var(--text-main)', fontSize: '1.2rem', fontWeight: '600', marginBottom: '10px' }}>Completa tu perfil</h2>
                   <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '25px' }}>Hola <strong>{oauthNombreTemp}</strong>, ya casi estamos.</p>
                   <form onSubmit={manejarRegistroOauthCompletado} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <input type="date" required value={authFechaNac} onChange={(e) => setAuthFechaNac(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                          <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Cumpleaños:</label>
+                          <input type="date" required value={authFechaNac} onChange={(e) => setAuthFechaNac(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      </div>
                       <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Finalizar Registro</button>
                   </form>
               </>
@@ -126,10 +129,22 @@ function Registro({ onLogin }) {
               <>
                   <h2 style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '500', marginBottom: '30px', marginTop: 0 }}>Crea tu cuenta de equipo</h2>
                   <form onSubmit={manejarRegistro} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <input type="text" required placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
-                      <input type="email" required placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
-                      <input type="password" required placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
-                      <input type="date" required value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                          <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Nombre completo:</label>
+                          <input type="text" required placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                          <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Email:</label>
+                          <input type="email" required placeholder="tu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                          <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Contraseña:</label>
+                          <input type="password" required placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                          <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Cumpleaños:</label>
+                          <input type="date" required value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                      </div>
                       <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Crear Cuenta</button>
                   </form>
 
