@@ -78,7 +78,10 @@ app.get('/api/tareas', verificarToken, (req, res) => {
 app.post('/api/tareas', verificarToken, (req, res) => {
     const { titulo, descripcion, fecha_vencimiento, fecha_notificacion, repeticion, grupo_id, asignado_a } = req.body;
 
-    const notificacionFinal = fecha_notificacion ? fecha_notificacion : null;
+    // LIMPIEZA DE DATOS (Backend a prueba de bombas)
+    // Si la fecha llega vacía o con el bug del "T00:00", la convertimos en un null limpio para MySQL
+    const vencimientoFinal = (fecha_vencimiento && fecha_vencimiento !== 'T00:00' && fecha_vencimiento !== '') ? fecha_vencimiento : null;
+    const notificacionFinal = (fecha_notificacion && fecha_notificacion !== '') ? fecha_notificacion : null;
     const repeticionFinal = repeticion ? repeticion : 'ninguna';
 
     // Guardamos si la tarea pertenece a un grupo o es personal
@@ -88,8 +91,12 @@ app.post('/api/tareas', verificarToken, (req, res) => {
 
     const query = 'INSERT INTO tareas (titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion, usuario_id, grupo_id, asignado_a) VALUES (?, ?, ?, "Por Hacer", ?, ?, ?, ?, ?)';
 
-    db.query(query, [titulo, descripcion, fecha_vencimiento, notificacionFinal, repeticionFinal, req.usuario.id, grupoFinal, asignadoFinal], (err, resultado) => {
-        if (err) return res.status(500).json({ error: 'Error al crear la tarea' });
+    db.query(query, [titulo, descripcion, vencimientoFinal, notificacionFinal, repeticionFinal, req.usuario.id, grupoFinal, asignadoFinal], (err, resultado) => {
+        if (err) {
+            // EL CHIVATO: Ahora Render sí imprimirá el fallo real en su pestaña "Logs"
+            console.error(">>> ERROR SQL AL CREAR TAREA:", err);
+            return res.status(500).json({ error: 'Error al crear la tarea' });
+        }
         res.json({ mensaje: 'Tarea creada correctamente', id: resultado.insertId });
     });
 });
