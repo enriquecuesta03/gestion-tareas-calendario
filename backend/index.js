@@ -79,7 +79,6 @@ app.post('/api/tareas', verificarToken, (req, res) => {
     const { titulo, descripcion, fecha_vencimiento, fecha_notificacion, repeticion, grupo_id, asignado_a } = req.body;
 
     // LIMPIEZA DE DATOS (Backend a prueba de bombas)
-    // Si la fecha llega vacía o con el bug del "T00:00", la convertimos en un null limpio para MySQL
     const vencimientoFinal = (fecha_vencimiento && fecha_vencimiento !== 'T00:00' && fecha_vencimiento !== '') ? fecha_vencimiento : null;
     const notificacionFinal = (fecha_notificacion && fecha_notificacion !== '') ? fecha_notificacion : null;
     const repeticionFinal = repeticion ? repeticion : 'ninguna';
@@ -89,11 +88,12 @@ app.post('/api/tareas', verificarToken, (req, res) => {
     // Si no se la asignamos a nadie en concreto, se la asigna al usuario que la crea
     const asignadoFinal = asignado_a ? asignado_a : req.usuario.id;
 
-    const query = 'INSERT INTO tareas (titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion, usuario_id, grupo_id, asignado_a) VALUES (?, ?, ?, "Por Hacer", ?, ?, ?, ?, ?)';
+    // LA SOLUCIÓN: Usamos un interrogante (?) para el estado 'Por Hacer' y evitamos el fallo de las comillas
+    const query = 'INSERT INTO tareas (titulo, descripcion, fecha_vencimiento, estado, fecha_notificacion, repeticion, usuario_id, grupo_id, asignado_a) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
-    db.query(query, [titulo, descripcion, vencimientoFinal, notificacionFinal, repeticionFinal, req.usuario.id, grupoFinal, asignadoFinal], (err, resultado) => {
+    // Metemos el texto 'Por Hacer' directamente en la lista de variables a enviar
+    db.query(query, [titulo, descripcion, vencimientoFinal, 'Por Hacer', notificacionFinal, repeticionFinal, req.usuario.id, grupoFinal, asignadoFinal], (err, resultado) => {
         if (err) {
-            // EL CHIVATO: Ahora Render sí imprimirá el fallo real en su pestaña "Logs"
             console.error(">>> ERROR SQL AL CREAR TAREA:", err);
             return res.status(500).json({ error: 'Error al crear la tarea' });
         }
