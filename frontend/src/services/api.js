@@ -53,7 +53,9 @@ export const api = {
         // 2. Llamamos a ElevenLabs directamente desde tu navegador
         const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
         const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
-        const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+        
+        // Forzamos a ElevenLabs a devolver un MP3 estándar
+        const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`;
         
         const respuestaAudio = await fetch(urlEleven, {
             method: 'POST',
@@ -74,7 +76,15 @@ export const api = {
             throw new Error("ElevenLabs rechazó la petición de audio");
         }
 
-        return respuestaAudio;
+        // 3. EL TRUCO ANTIMARES: 
+        // Descargamos el audio entero y lo convertimos en un archivo cerrado.
+        const audioBlob = await respuestaAudio.blob();
+        console.log("Audio generado con éxito. Tamaño:", audioBlob.size, "bytes");
+
+        // Creamos una respuesta "falsa" para engañar a React y que crea que viene del Backend
+        return new Response(audioBlob, {
+            headers: { 'Content-Type': 'audio/mpeg' }
+        });
     },
         
     extraerDatosVoz: (token, texto, estadoActual) => 
