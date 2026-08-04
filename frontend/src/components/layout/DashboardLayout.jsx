@@ -170,8 +170,11 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const eventosCumpleanos = [];
   if (fechaNacUsuario) { const partes = fechaNacUsuario.split('-'); if (partes.length === 3) { for (let i = -1; i <= 3; i++) eventosCumpleanos.push({ id: `cumple-${new Date().getFullYear() + i}`, title: 'Día Libre (Cumpleaños)', date: `${new Date().getFullYear() + i}-${partes[1]}-${partes[2]}`, allDay: true, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }); } }
 
+  // Filtramos las vacaciones igual que hacemos con las tareas
+  const vacacionesFiltradas = vacaciones.filter(v => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? v.grupo_id === null : v.grupo_id === parseInt(filtroVista)));
+
   // Añadimos las vacaciones en color naranja
-  const eventosVacaciones = vacaciones.map(v => {
+  const eventosVacaciones = vacacionesFiltradas.map(v => {
       const dFin = new Date(v.fecha_fin); dFin.setDate(dFin.getDate() + 1); 
       return { id: `vacacion-${v.id}`, title: `Ausencia: ${v.usuario_nombre}`, start: `${new Date(v.fecha_inicio).getFullYear()}-${String(new Date(v.fecha_inicio).getMonth() + 1).padStart(2, '0')}-${String(new Date(v.fecha_inicio).getDate()).padStart(2, '0')}`, end: `${dFin.getFullYear()}-${String(dFin.getMonth() + 1).padStart(2, '0')}-${String(dFin.getDate()).padStart(2, '0')}`, allDay: true, backgroundColor: '#f59e0b', borderColor: '#f59e0b', extendedProps: { usuario_nombre: v.usuario_nombre, grupo_nombre: v.grupo_nombre, id_real: v.id }};
   });
