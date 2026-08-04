@@ -285,7 +285,7 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
     }
 });
 
-// ==========================================
+/*/ ==========================================
 // RUTA DEL RESUMEN DIARIO CON VOZ (GEMINI + ELEVENLABS)
 // ==========================================
 app.post('/api/briefing', verificarToken, async (req, res) => {
@@ -324,7 +324,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         const textoGenerado = await generarConFallback(prompt);
         console.log("Guion generado por Gemini:", textoGenerado);
 
-        // 4. Llamamos a ElevenLabs para convertir el texto en audio (CON DISFRAZ ANTI-CLOUDFLARE)
+        // 4. Llamamos a ElevenLabs para convertir el texto en audio
         const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
         const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
         const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
@@ -333,10 +333,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             method: 'POST',
             headers: {
                 'xi-api-key': elevenLabsApiKey,
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mpeg',
-                // Este User-Agent engaña a Cloudflare para que crea que somos un navegador Chrome de Windows
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 text: textoGenerado,
@@ -363,6 +360,52 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
     } catch (error) {
         console.error("Fallo general en la creación del audio:", error);
         res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+*/
+
+// ==========================================
+// RUTA DEL RESUMEN DIARIO (SOLO TEXTO CON GEMINI)
+// ==========================================
+app.post('/api/briefing', verificarToken, async (req, res) => {
+    try {
+        const { tareas, nombre } = req.body;
+
+        const tareasLimpias = tareas.map(t => ({
+            tarea: t.titulo,
+            estado: t.estado,
+            vence: t.fecha_vencimiento ? t.fecha_vencimiento.split('T')[0] : 'sin fecha límite'
+        }));
+
+        const fechaHoy = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
+
+        const prompt = `
+        Actúa exclusivamente como Kora, un asistente personal de voz muy humano y profesional.
+        Tu objetivo es leer el resumen del día para el usuario llamado ${nombre}. Hoy es ${fechaHoy}.
+
+        DATOS DEL USUARIO:
+        -------------------
+        ${JSON.stringify(tareasLimpias)}
+        -------------------
+
+        INSTRUCCIONES DE VOZ (ESTRICTAS):
+        1. Escribe un único párrafo de 3 a 5 frases fluidas.
+        2. Usa lenguaje natural, conversacional, cercano y tutéame SIEMPRE (dirígete a mí de "tú", NUNCA de "usted").
+        3. PROHIBIDO usar asteriscos, markdown, viñetas, guiones, emojis o caracteres especiales.
+        4. ESTRUCTURA OBLIGATORIA: Primero dime cuántas tareas tengo en total. Luego, nómbrame el título de al menos una tarea para que sepa por dónde empezar a trabajar.
+        5. CIERRE OBLIGATORIO: Termina siempre tu intervención deseándome de forma muy amable un excelente día de trabajo.
+        6. PROHIBICIÓN ABSOLUTA: NO ofrezcas ayuda adicional, NO te ofrezcas a reorganizar la agenda. Limítate a dar los datos y despedirte.
+        `;
+
+        const textoGenerado = await generarConFallback(prompt);
+        console.log("Guion generado por Gemini:", textoGenerado);
+
+        // Devolvemos SOLO el texto. El audio lo gestionará el Frontend.
+        res.json({ texto: textoGenerado });
+
+    } catch (error) {
+        console.error("Fallo general en la creación del guion:", error);
+        res.status(500).json({ error: "Error interno del servidor al generar el guion." });
     }
 });
 
