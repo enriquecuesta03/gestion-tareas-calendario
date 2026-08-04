@@ -170,15 +170,15 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const eventosCumpleanos = [];
   if (fechaNacUsuario) { const partes = fechaNacUsuario.split('-'); if (partes.length === 3) { for (let i = -1; i <= 3; i++) eventosCumpleanos.push({ id: `cumple-${new Date().getFullYear() + i}`, title: 'Día Libre (Cumpleaños)', date: `${new Date().getFullYear() + i}-${partes[1]}-${partes[2]}`, allDay: true, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }); } }
 
-  // Filtramos las vacaciones de forma robusta por si el servidor no nos envía el grupo_id
+  // Filtramos las vacaciones: Si el filtro es "Personal", ocultamos TODAS las ausencias, ya que estas siempre pertenecen a una empresa.
   const vacacionesFiltradas = vacaciones.filter(v => {
       if (filtroVista === 'todas') return true;
-      if (filtroVista === 'personal') return !v.grupo_id; // Si no tiene grupo, es personal
+      if (filtroVista === 'personal') return false; // <-- Aquí está el corte radical: en personal no mostramos vacaciones de compañeros.
       
       // Comprobamos la compatibilidad buscando el nombre del grupo seleccionado
       const grupoSeleccionado = misGrupos.find(g => String(g.id) === String(filtroVista));
       
-      return (v.grupo_id !== undefined && String(v.grupo_id) === String(filtroVista)) || 
+      return (v.grupo_id !== undefined && v.grupo_id !== null && String(v.grupo_id) === String(filtroVista)) || 
              (grupoSeleccionado && v.grupo_nombre === grupoSeleccionado.nombre);
   });
 
