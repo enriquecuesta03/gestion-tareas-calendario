@@ -108,7 +108,21 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const manejarEnvioFormulario = async (e) => {
     e.preventDefault();
     const repeticionFinal = repeticion === 'personalizado' ? `personalizado_${diasPersonalizados}` : repeticion;
-    const datosTarea = { titulo, descripcion, fecha_vencimiento: `${fecha}T${hora || '00:00'}`, fecha_notificacion: fechaNotificacion, repeticion: repeticionFinal, grupo_id: tareaGrupoId || null, asignado_a: tareaAsignadoA || null };
+    
+    // CORRECCIÓN MÁGICA: Si no hay fecha, evitamos enviar "T00:00" a MySQL
+    const fechaVencimientoFinal = fecha ? `${fecha}T${hora || '00:00'}` : null;
+    const fechaNotifFinal = fechaNotificacion ? fechaNotificacion : null;
+
+    const datosTarea = { 
+        titulo, 
+        descripcion, 
+        fecha_vencimiento: fechaVencimientoFinal, 
+        fecha_notificacion: fechaNotifFinal, 
+        repeticion: repeticionFinal, 
+        grupo_id: tareaGrupoId || null, 
+        asignado_a: tareaAsignadoA || null 
+    };
+    
     const url = tareaEnEdicion ? `${API_URL}/api/tareas/${tareaEnEdicion}` : `${API_URL}/api/tareas`;
     
     const exito = await guardarTarea(url, tareaEnEdicion ? 'PUT' : 'POST', datosTarea, !!tareaEnEdicion);
