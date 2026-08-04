@@ -38,29 +38,39 @@ export const api = {
     borrarTarea: (token, id) => 
         fetch(`${API_URL}/api/tareas/${id}`, { method: 'DELETE', headers: getHeaders(token) }),
 
-    // --- INTELIGENCIA ARTIFICIAL Y ASISTENTE DE VOZ ---
+// --- INTELIGENCIA ARTIFICIAL Y ASISTENTE DE VOZ ---
     reproducirResumen: async (token, tareas, nombre) => {
-        // 1. Pedimos solo el guion de texto a tu backend en Render
+        console.log("KORA VOZ 2.0 - Iniciando petición limpia");
+
+        // 1. Pedimos SOLO el texto al backend (Render)
         const respuestaTexto = await fetch(`${API_URL}/api/briefing`, {
             method: 'POST',
             headers: getHeaders(token),
             body: JSON.stringify({ tareas, nombre })
         });
         
-        if (!respuestaTexto.ok) throw new Error("Fallo al generar el guion con Gemini");
-        const data = await respuestaTexto.json();
-
-        // 2. Llamamos a ElevenLabs directamente desde tu navegador
-        const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-        const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
+        if (!respuestaTexto.ok) {
+            throw new Error("Fallo en el backend al generar el guion con Gemini.");
+        }
         
-        // Forzamos a ElevenLabs a devolver un MP3 estándar
+        const data = await respuestaTexto.json();
+        console.log("Guion generado:", data.texto);
+
+        // 2. Llamamos a ElevenLabs desde el navegador (para saltarnos el bloqueo de IP)
+        const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+        
+        if (!elevenLabsApiKey) {
+            alert("Falta la API Key en Vercel. Kora no puede hablar sin su llave.");
+            throw new Error("API Key no configurada en el frontend.");
+        }
+
+        const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
         const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`;
         
         const respuestaAudio = await fetch(urlEleven, {
             method: 'POST',
             headers: {
-                'xi-api-key': elevenLabsApiKey || '',
+                'xi-api-key': elevenLabsApiKey,
                 'Content-Type': 'application/json',
                 'Accept': 'audio/mpeg'
             },
@@ -71,19 +81,19 @@ export const api = {
             })
         });
 
+        // 3. EL FILTRO SALVAVIDAS: Evita que React intente reproducir un error como si fuera música
         if (!respuestaAudio.ok) {
-            console.error(">>> ERROR DE ELEVENLABS:", await respuestaAudio.text());
-            throw new Error("ElevenLabs rechazó la petición de audio");
+            const errorDeEleven = await respuestaAudio.text();
+            console.error("ERROR REAL DE ELEVENLABS:", errorDeEleven);
+            throw new Error("ElevenLabs rechazó el audio. Revisa la consola.");
         }
 
-        // 3. EL TRUCO ANTIMARES: 
-        // Descargamos el audio entero y lo convertimos en un archivo cerrado.
+        // 4. Convertimos la respuesta en un MP3 cerrado y engañamos a React para que lo lea bien
         const audioBlob = await respuestaAudio.blob();
-        console.log("Audio generado con éxito. Tamaño:", audioBlob.size, "bytes");
-
-        // Creamos una respuesta "falsa" para engañar a React y que crea que viene del Backend
-        return new Response(audioBlob, {
-            headers: { 'Content-Type': 'audio/mpeg' }
+        console.log("Audio listo para reproducir.");
+        
+        return new Response(audioBlob, { 
+            headers: { 'Content-Type': 'audio/mpeg' } 
         });
     },
         
