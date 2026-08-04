@@ -324,7 +324,7 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
         const textoGenerado = await generarConFallback(prompt);
         console.log("Guion generado por Gemini:", textoGenerado);
 
-        // 4. Llamamos a ElevenLabs para convertir el texto en audio
+        // 4. Llamamos a ElevenLabs para convertir el texto en audio (CON DISFRAZ ANTI-CLOUDFLARE)
         const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
         const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
         const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
@@ -333,7 +333,10 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
             method: 'POST',
             headers: {
                 'xi-api-key': elevenLabsApiKey,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg',
+                // Este User-Agent engaña a Cloudflare para que crea que somos un navegador Chrome de Windows
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             },
             body: JSON.stringify({
                 text: textoGenerado,
