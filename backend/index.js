@@ -286,13 +286,12 @@ app.post('/api/extraer-tarea', verificarToken, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DEL RESUMEN DIARIO CON VOZ (GEMINI + ELEVENLABS)
+// RUTA DEL RESUMEN DIARIO (SOLO TEXTO CON GEMINI)
 // ==========================================
 app.post('/api/briefing', verificarToken, async (req, res) => {
     try {
         const { tareas, nombre } = req.body;
 
-        // 1. Preparamos las tareas para enviarlas a la IA de forma limpia
         const tareasLimpias = tareas.map(t => ({
             tarea: t.titulo,
             estado: t.estado,
@@ -301,7 +300,6 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
 
         const fechaHoy = new Intl.DateTimeFormat('es-ES', { dateStyle: 'long' }).format(new Date());
 
-        // 2. Instrucciones para que Gemini genere el texto a leer
         const prompt = `
         Actúa exclusivamente como Kora, un asistente personal de voz muy humano y profesional.
         Tu objetivo es leer el resumen del día para el usuario llamado ${nombre}. Hoy es ${fechaHoy}.
@@ -313,53 +311,21 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
 
         INSTRUCCIONES DE VOZ (ESTRICTAS):
         1. Escribe un único párrafo de 3 a 5 frases fluidas.
-        2. Usa lenguaje natural, conversacional, cercano y tutéame SIEMPRE (dirígete a mí de "tú", NUNCA de "usted").
-        3. PROHIBIDO usar asteriscos, markdown, viñetas, guiones, emojis o caracteres especiales.
-        4. ESTRUCTURA OBLIGATORIA: Primero dime cuántas tareas tengo en total. Luego, nómbrame el título de al menos una tarea para que sepa por dónde empezar a trabajar.
-        5. CIERRE OBLIGATORIO: Termina siempre tu intervención deseándome de forma muy amable un excelente día de trabajo.
-        6. PROHIBICIÓN ABSOLUTA: NO ofrezcas ayuda adicional, NO te ofrezcas a reorganizar la agenda, ni digas frases como "si lo necesitas puedo ayudarte". Limítate exclusivamente a dar los datos de las tareas y despedirte.
+        2. Usa lenguaje natural, conversacional, cercano y tutéame SIEMPRE.
+        3. PROHIBIDO usar asteriscos, markdown, viñetas, emojis o caracteres especiales.
+        4. ESTRUCTURA OBLIGATORIA: Primero dime cuántas tareas tengo en total. Luego, nómbrame el título de al menos una tarea.
+        5. CIERRE OBLIGATORIO: Termina siempre deseándome un excelente día de trabajo.
         `;
 
-        // 3. Obtenemos el texto del guion
         const textoGenerado = await generarConFallback(prompt);
         console.log("Guion generado por Gemini:", textoGenerado);
 
-        // 4. Llamamos a ElevenLabs para convertir el texto en audio
-        const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
-        const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
-        const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`
-        
-        const respuestaEleven = await fetch(urlEleven, {
-            method: 'POST',
-            headers: {
-                'xi-api-key': elevenLabsApiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                text: textoGenerado,
-                model_id: "eleven_multilingual_v2", 
-                voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.75
-                }
-            })
-        });
-
-        if (!respuestaEleven.ok) {
-            const errorText = await respuestaEleven.text();
-            console.error("Error de ElevenLabs:", errorText);
-            return res.status(500).json({ error: "ElevenLabs no pudo procesar la voz." });
-        }
-
-        // 5. Devolvemos el archivo de audio (.mp3) al usuario
-        const audioBuffer = await respuestaEleven.arrayBuffer();
-
-        res.set('Content-Type', 'audio/mpeg');
-        res.send(Buffer.from(audioBuffer));
+        // Devolvemos el texto a React, y React se encarga del audio
+        res.json({ texto: textoGenerado });
 
     } catch (error) {
-        console.error("Fallo general en la creación del audio:", error);
-        res.status(500).json({ error: "Error interno del servidor." });
+        console.error("Fallo general en la creación del guion:", error);
+        res.status(500).json({ error: "Error interno del servidor al generar el guion." });
     }
 });
 

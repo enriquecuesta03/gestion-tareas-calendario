@@ -39,8 +39,43 @@ export const api = {
         fetch(`${API_URL}/api/tareas/${id}`, { method: 'DELETE', headers: getHeaders(token) }),
 
     // --- INTELIGENCIA ARTIFICIAL Y ASISTENTE DE VOZ ---
-    reproducirResumen: (token, tareas, nombre) => 
-        fetch(`${API_URL}/api/briefing`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify({ tareas, nombre }) }),
+    reproducirResumen: async (token, tareas, nombre) => {
+        // 1. Pedimos solo el guion de texto a tu backend en Render
+        const respuestaTexto = await fetch(`${API_URL}/api/briefing`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify({ tareas, nombre })
+        });
+        
+        if (!respuestaTexto.ok) throw new Error("Fallo al generar el guion con Gemini");
+        const data = await respuestaTexto.json();
+
+        // 2. Llamamos a ElevenLabs directamente desde tu navegador
+        const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+        const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
+        const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+        
+        const respuestaAudio = await fetch(urlEleven, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': elevenLabsApiKey || '',
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg'
+            },
+            body: JSON.stringify({
+                text: data.texto,
+                model_id: "eleven_multilingual_v2", 
+                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+            })
+        });
+
+        if (!respuestaAudio.ok) {
+            console.error(">>> ERROR DE ELEVENLABS:", await respuestaAudio.text());
+            throw new Error("ElevenLabs rechazó la petición de audio");
+        }
+
+        return respuestaAudio;
+    },
         
     extraerDatosVoz: (token, texto, estadoActual) => 
         fetch(`${API_URL}/api/extraer-tarea`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify({ texto, estadoActual }) }),
