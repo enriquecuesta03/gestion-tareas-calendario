@@ -145,9 +145,9 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const obtenerFechaLocalStr = (fechaIso) => { if (!fechaIso) return ''; const d = new Date(fechaIso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const obtenerFechaHoraLocalStr = (fechaIso) => { if (!fechaIso) return ''; const d = new Date(fechaIso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
   
-  // Filtramos la lista principal según la empresa que hayamos elegido ver
+  // Filtramos la lista principal según la empresa que hayamos elegido ver (aseguramos tipos compatibles)
   const notificacionesPendientes = tareas.filter(tarea => tarea.estado !== 'Completado' && tarea.fecha_notificacion && Date.now() >= new Date(tarea.fecha_notificacion).getTime());
-  const tareasFiltradas = tareas.filter(tarea => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? tarea.grupo_id === null : tarea.grupo_id === parseInt(filtroVista)));
+  const tareasFiltradas = tareas.filter(tarea => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? tarea.grupo_id === null : String(tarea.grupo_id) === String(filtroVista)));
   const limiteVisibleStr = obtenerFechaLocalStr(new Date());
   
   // Separamos las tareas en sus tres columnas correspondientes
@@ -170,10 +170,19 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const eventosCumpleanos = [];
   if (fechaNacUsuario) { const partes = fechaNacUsuario.split('-'); if (partes.length === 3) { for (let i = -1; i <= 3; i++) eventosCumpleanos.push({ id: `cumple-${new Date().getFullYear() + i}`, title: 'Día Libre (Cumpleaños)', date: `${new Date().getFullYear() + i}-${partes[1]}-${partes[2]}`, allDay: true, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }); } }
 
-  // Filtramos las vacaciones igual que hacemos con las tareas
-  const vacacionesFiltradas = vacaciones.filter(v => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? v.grupo_id === null : v.grupo_id === parseInt(filtroVista)));
+  // Filtramos las vacaciones de forma robusta por si el servidor no nos envía el grupo_id
+  const vacacionesFiltradas = vacaciones.filter(v => {
+      if (filtroVista === 'todas') return true;
+      if (filtroVista === 'personal') return !v.grupo_id; // Si no tiene grupo, es personal
+      
+      // Comprobamos la compatibilidad buscando el nombre del grupo seleccionado
+      const grupoSeleccionado = misGrupos.find(g => String(g.id) === String(filtroVista));
+      
+      return (v.grupo_id !== undefined && String(v.grupo_id) === String(filtroVista)) || 
+             (grupoSeleccionado && v.grupo_nombre === grupoSeleccionado.nombre);
+  });
 
-  // Añadimos las vacaciones en color naranja
+  // Añadimos las vacaciones filtradas en color naranja
   const eventosVacaciones = vacacionesFiltradas.map(v => {
       const dFin = new Date(v.fecha_fin); dFin.setDate(dFin.getDate() + 1); 
       return { id: `vacacion-${v.id}`, title: `Ausencia: ${v.usuario_nombre}`, start: `${new Date(v.fecha_inicio).getFullYear()}-${String(new Date(v.fecha_inicio).getMonth() + 1).padStart(2, '0')}-${String(new Date(v.fecha_inicio).getDate()).padStart(2, '0')}`, end: `${dFin.getFullYear()}-${String(dFin.getMonth() + 1).padStart(2, '0')}-${String(dFin.getDate()).padStart(2, '0')}`, allDay: true, backgroundColor: '#f59e0b', borderColor: '#f59e0b', extendedProps: { usuario_nombre: v.usuario_nombre, grupo_nombre: v.grupo_nombre, id_real: v.id }};
