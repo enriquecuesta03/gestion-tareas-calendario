@@ -127,16 +127,20 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     if (token) fetch(`${API_URL}/api/perfil`, { headers: headersConAuth() }).then(res => res.json()).then(data => { if (data.fecha_nac_limpia) { setFechaNacUsuario(data.fecha_nac_limpia); localStorage.setItem('fechaNacUsuario', data.fecha_nac_limpia); } }).catch(console.error);
   }, [token]);
 
-  // CORRECCIÓN 1: Eliminamos la matemática que sumaba la zona horaria. Rompemos la Z internacional.
+  // CORRECCION 1: Eliminamos la matematica que sumaba la zona horaria. Rompemos la Z internacional.
   const obtenerFechaHoraLocalStr = (fechaIso) => { 
       if (!fechaIso) return ''; 
       return fechaIso.split('.')[0].replace('Z', '').slice(0, 16); 
   };
   
-  // CORRECCIÓN 2: Evaluamos las notificaciones limpiando la Z del servidor para comparar en nuestra zona horaria
+  // CORRECCION 2: Evaluamos limpiando espacios y la Z
   const notificacionesPendientes = tareas.filter(tarea => {
       if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
-      const fechaLimpia = tarea.fecha_notificacion.endsWith('Z') ? tarea.fecha_notificacion.slice(0, -1) : tarea.fecha_notificacion;
+      
+      // Cambiamos el espacio por una T y quitamos la Z si la hay
+      const textoSeguro = tarea.fecha_notificacion.replace(' ', 'T');
+      const fechaLimpia = textoSeguro.endsWith('Z') ? textoSeguro.slice(0, -1) : textoSeguro;
+      
       return Date.now() >= new Date(fechaLimpia).getTime();
   });
 
@@ -183,6 +187,32 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   });
   
   const datosGraficoEstado = [ { name: 'Por Hacer', value: tareasPorHacer.length, color: '#ef4444' }, { name: 'En Progreso', value: tareasEnProgreso.length, color: '#3b82f6' }, { name: 'Completado', value: tareasCompletadas.length, color: '#10b981' } ];
+
+
+  // CHIVATO MODO DEBUG: NOTIFICACIONES
+  useEffect(() => {
+      console.log("=== DEBUG DE NOTIFICACIONES ===");
+      const ahora = Date.now();
+      console.log("Reloj actual del navegador:", new Date().toLocaleString());
+      
+      tareas.forEach(tarea => {
+          if (tarea.fecha_notificacion) {
+              const textoBBDD = tarea.fecha_notificacion;
+              // Forzamos la T para que navegadores como Safari o Chrome no den Invalid Date
+              const textoConT = typeof textoBBDD === 'string' ? textoBBDD.replace(' ', 'T') : textoBBDD;
+              const fechaLimpia = textoConT.endsWith('Z') ? textoConT.slice(0, -1) : textoConT;
+              const milisegundosAlarma = new Date(fechaLimpia).getTime();
+              
+              console.log(`[Tarea] "${tarea.titulo}"`);
+              console.log(`   - Texto crudo BBDD: ${textoBBDD}`);
+              console.log(`   - Estado: ${tarea.estado}`);
+              console.log(`   - Fecha calculada: ${new Date(fechaLimpia).toLocaleString()} | Valida: ${!isNaN(milisegundosAlarma)}`);
+              console.log(`   - Deberia saltar?: ${ahora >= milisegundosAlarma ? 'SI' : 'NO'}`);
+          }
+      });
+      console.log("==================================");
+  }, [tareas]);
+
 
   return (
     <div className="app-layout">
