@@ -19,27 +19,40 @@ function TableroOperativo() {
     // Estado del filtro: 7 dias por defecto
     const [filtroTiempo, setFiltroTiempo] = useState('7');
 
-    const filtrarPorVencimientoFuturo = (listaTareas) => {
+const filtrarPorVencimientoFuturo = (listaTareas) => {
         if (filtroTiempo === 'todo') return listaTareas;
 
         return listaTareas.filter(tarea => {
-            // Si la tarea no tiene fecha de vencimiento, la mostramos para no perderla
-            if (!tarea.fecha_vencimiento) return true;
+            // Si la tarea no tiene fecha, la mostramos para no perderla
+            if (!tarea.fecha_vencimiento) {
+                console.log(`[Filtro] "${tarea.titulo}" -> Mostrada (Sin fecha)`);
+                return true;
+            }
 
             const fechaTarea = new Date(tarea.fecha_vencimiento);
-            if (isNaN(fechaTarea.getTime())) return true;
+            if (isNaN(fechaTarea.getTime())) {
+                console.log(`[Filtro] "${tarea.titulo}" -> Mostrada (Fecha inválida)`);
+                return true;
+            }
 
             const hoy = new Date();
             
-            // AHORA RESTAMOS AL REVÉS: Fecha futura - Hoy
+            // EL TRUCO MAESTRO: Ponemos las dos fechas a las 00:00:00 
+            // Así eliminamos los picos de horas que rompen el cálculo de los días
+            fechaTarea.setHours(0, 0, 0, 0);
+            hoy.setHours(0, 0, 0, 0);
+            
             const diferenciaMilisegundos = fechaTarea - hoy;
-            const diasRestantes = diferenciaMilisegundos / (1000 * 60 * 60 * 24);
+            const diasRestantes = Math.round(diferenciaMilisegundos / (1000 * 60 * 60 * 24));
 
-            // REGLA DE ORO: Si la tarea ya ha caducado (días restantes negativos), SE MUESTRA SIEMPRE
-            if (diasRestantes < 0) return true;
+            // REGLA DE ORO: Si ya ha caducado (días restantes negativos), o entra en el plazo, se muestra
+            const entraEnPlazo = diasRestantes <= parseInt(filtroTiempo, 10);
+            const estaCaducada = diasRestantes < 0;
+            const esVisible = estaCaducada || entraEnPlazo;
 
-            // Si es futura, comprobamos si vence dentro de los próximos X días
-            return diasRestantes <= parseInt(filtroTiempo, 10);
+            console.log(`[Filtro] "${tarea.titulo}" | Vence en: ${diasRestantes} días | ¿Caducada?: ${estaCaducada} | Visible: ${esVisible}`);
+
+            return esVisible;
         });
     };
 
