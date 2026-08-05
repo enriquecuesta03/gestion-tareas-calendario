@@ -258,4 +258,5 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   );
 }
 
+
 export default DashboardLayout;
