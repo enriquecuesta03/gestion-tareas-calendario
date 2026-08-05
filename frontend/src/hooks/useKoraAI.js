@@ -52,7 +52,7 @@ export function useKoraAI({
         };
     }, []);
 
-    // 1. LEER EL RESUMEN DIARIO EN VOZ ALTA
+    // 1. LEER EL RESUMEN DIARIO EN VOZ ALTA (VERSIÓN 2.0 - ELEVENLABS)
     const reproducirResumen = async () => {
         // Si Kora ya está hablando y le damos al botón, se calla y se detiene
         if (hablando && audioRef.current) {
@@ -61,31 +61,56 @@ export function useKoraAI({
             setHablando(false);
             return;
         }
-        // Si ya le hemos pedido que hable y está pensando, no hacemos nada para no saturarla
+        // Si ya le hemos pedido que hable y está pensando, no hacemos nada
         if (procesando) return;
         
         setProcesando(true);
         try {
-            // Cogemos solo las tareas que no están terminadas para hacer el resumen
+            // Cogemos solo las tareas que no están terminadas
             const tareasPendientes = tareas.filter(t => t.estado !== 'Completado');
+            console.log("KORA VOZ 2.0 - Pidiendo guion a Gemini...");
             
-            console.log("Pidiendo audio a:", `${API_URL}/api/briefing`);
-            
-            // Le mandamos las tareas al servidor para que nos genere la voz
-            const respuesta = await fetch(`${API_URL}/api/briefing`, {
+            // 1. Pedimos SOLO EL TEXTO al backend
+            const respuestaTexto = await fetch(`${API_URL}/api/briefing`, {
                 method: 'POST', 
                 headers: headersConAuth(), 
                 body: JSON.stringify({ tareas: tareasPendientes, nombre: nombreUsuario })
             });
             
-            if (!respuesta.ok) {
-                const errorTexto = await respuesta.text();
-                throw new Error(`Código ${respuesta.status}: ${errorTexto}`);
+            if (!respuestaTexto.ok) throw new Error("Fallo al generar el guion en el backend");
+            const dataTexto = await respuestaTexto.json();
+            console.log("Texto recibido:", dataTexto.texto);
+
+            // 2. Llamamos a ElevenLabs desde el navegador
+            const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+            if (!elevenLabsApiKey) {
+                toast.error("Falta la API Key de ElevenLabs");
+                throw new Error("API Key no configurada");
+            }
+
+            const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
+            const respuestaAudio = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+                method: 'POST',
+                headers: {
+                    'xi-api-key': elevenLabsApiKey,
+                    'Content-Type': 'application/json',
+                    'Accept': 'audio/mpeg'
+                },
+                body: JSON.stringify({
+                    text: dataTexto.texto,
+                    model_id: "eleven_multilingual_v2", 
+                    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                })
+            });
+
+            if (!respuestaAudio.ok) {
+                const errorEleven = await respuestaAudio.text();
+                console.error("ERROR DE ELEVENLABS:", errorEleven);
+                throw new Error("ElevenLabs rechazó la petición");
             }
             
-            // Recibimos el archivo de sonido y lo preparamos para que suene en el navegador
-            const audioBlob = await respuesta.blob();
-            
+            // 3. Convertimos y reproducimos el MP3 real
+            const audioBlob = await respuestaAudio.blob();
             if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
             const audioUrl = URL.createObjectURL(audioBlob);
             audioUrlRef.current = audioUrl; 
@@ -93,7 +118,7 @@ export function useKoraAI({
             const reproductor = new Audio(audioUrl);
             audioRef.current = reproductor;
             
-            // Cuando termine de hablar, apagamos todo y lo dejamos listo para la próxima
+            // Cuando termine de hablar, apagamos todo
             reproductor.onended = () => { 
                 setHablando(false); 
                 audioRef.current = null; 
@@ -107,13 +132,7 @@ export function useKoraAI({
             
         } catch (error) {
             console.error("DETALLE DEL ERROR DE VOZ:", error);
-            
-            if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-                toast.error("El servidor está apagado o bloqueando la conexión.");
-            } else {
-                toast.error("Fallo del servidor: " + error.message.substring(0, 50));
-            }
-            
+            toast.error("Fallo de voz: " + error.message.substring(0, 50));
             setProcesando(false); 
             setHablando(false); 
             audioRef.current = null;
