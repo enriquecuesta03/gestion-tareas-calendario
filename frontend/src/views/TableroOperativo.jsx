@@ -7,7 +7,6 @@ y se las pasa al tablero para que las dibuje en pantalla.
 
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-
 import KanbanBoard from '../features/kanban/KanbanBoard';
 
 function TableroOperativo() {
@@ -19,11 +18,12 @@ function TableroOperativo() {
     // Estado del filtro: 7 dias por defecto
     const [filtroTiempo, setFiltroTiempo] = useState('7');
 
-const filtrarPorVencimientoFuturo = (listaTareas) => {
+    const filtrarPorVencimientoFuturo = (listaTareas) => {
+        // Validación de seguridad para que no rompa si React pasa un valor nulo
+        if (!listaTareas || !Array.isArray(listaTareas)) return [];
         if (filtroTiempo === 'todo') return listaTareas;
 
         return listaTareas.filter(tarea => {
-            // Si la tarea no tiene fecha, la mostramos para no perderla
             if (!tarea.fecha_vencimiento) {
                 console.log(`[Filtro] "${tarea.titulo}" -> Mostrada (Sin fecha)`);
                 return true;
@@ -37,29 +37,27 @@ const filtrarPorVencimientoFuturo = (listaTareas) => {
 
             const hoy = new Date();
             
-            // EL TRUCO MAESTRO: Ponemos las dos fechas a las 00:00:00 
-            // Así eliminamos los picos de horas que rompen el cálculo de los días
+            // Igualamos las horas a 0 para que el cálculo sea exacto por días
             fechaTarea.setHours(0, 0, 0, 0);
             hoy.setHours(0, 0, 0, 0);
             
             const diferenciaMilisegundos = fechaTarea - hoy;
             const diasRestantes = Math.round(diferenciaMilisegundos / (1000 * 60 * 60 * 24));
 
-            // REGLA DE ORO: Si ya ha caducado (días restantes negativos), o entra en el plazo, se muestra
             const entraEnPlazo = diasRestantes <= parseInt(filtroTiempo, 10);
             const estaCaducada = diasRestantes < 0;
             const esVisible = estaCaducada || entraEnPlazo;
 
-            console.log(`[Filtro] "${tarea.titulo}" | Vence en: ${diasRestantes} días | ¿Caducada?: ${estaCaducada} | Visible: ${esVisible}`);
+            console.log(`🔍 [Filtro] "${tarea.titulo}" | Vence en: ${diasRestantes} días | Visible: ${esVisible}`);
 
             return esVisible;
         });
     };
 
-    // Aplicamos el filtro a las tareas activas (las completadas las dejamos enteras o puedes filtrarlas también)
+    // AHORA SÍ: Pasamos todas las listas por el filtro
     const porHacerFiltradas = filtrarPorVencimientoFuturo(tareasPorHacer);
     const enProgresoFiltradas = filtrarPorVencimientoFuturo(tareasEnProgreso);
-    const completadasFiltradas = tareasCompletadas; // Las completadas no suelen tener fecha futura
+    const completadasFiltradas = filtrarPorVencimientoFuturo(tareasCompletadas);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
