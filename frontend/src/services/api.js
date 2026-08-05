@@ -113,4 +113,6 @@ export const api = {
         
     borrarVacacion: (token, id) => 
         fetch(`${API_URL}/api/vacaciones/${id}`, { method: 'DELETE', headers: getHeaders(token) }),
+    // Forzando actualizacion Vercel
+    
 };
