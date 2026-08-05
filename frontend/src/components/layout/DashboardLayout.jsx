@@ -127,12 +127,21 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     if (token) fetch(`${API_URL}/api/perfil`, { headers: headersConAuth() }).then(res => res.json()).then(data => { if (data.fecha_nac_limpia) { setFechaNacUsuario(data.fecha_nac_limpia); localStorage.setItem('fechaNacUsuario', data.fecha_nac_limpia); } }).catch(console.error);
   }, [token]);
 
-  const obtenerFechaHoraLocalStr = (fechaIso) => { if (!fechaIso) return ''; const d = new Date(fechaIso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+  // CORRECCIÓN 1: Eliminamos la matemática que sumaba la zona horaria. Rompemos la Z internacional.
+  const obtenerFechaHoraLocalStr = (fechaIso) => { 
+      if (!fechaIso) return ''; 
+      return fechaIso.split('.')[0].replace('Z', '').slice(0, 16); 
+  };
   
-  const notificacionesPendientes = tareas.filter(tarea => tarea.estado !== 'Completado' && tarea.fecha_notificacion && Date.now() >= new Date(tarea.fecha_notificacion).getTime());
+  // CORRECCIÓN 2: Evaluamos las notificaciones limpiando la Z del servidor para comparar en nuestra zona horaria
+  const notificacionesPendientes = tareas.filter(tarea => {
+      if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
+      const fechaLimpia = tarea.fecha_notificacion.endsWith('Z') ? tarea.fecha_notificacion.slice(0, -1) : tarea.fecha_notificacion;
+      return Date.now() >= new Date(fechaLimpia).getTime();
+  });
+
   const tareasFiltradas = tareas.filter(tarea => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? tarea.grupo_id === null : String(tarea.grupo_id) === String(filtroVista)));
   
-  // CORRECCIÓN: Separamos las tareas en sus tres columnas enviando TODA la información
   const tareasPorHacer = tareasFiltradas.filter(tarea => tarea.estado === 'Por Hacer');
   const tareasEnProgreso = tareasFiltradas.filter(tarea => tarea.estado === 'En Progreso');
   const tareasCompletadas = tareasFiltradas.filter(tarea => tarea.estado === 'Completado');
@@ -257,6 +266,5 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     </div>
   );
 }
-
 
 export default DashboardLayout;
