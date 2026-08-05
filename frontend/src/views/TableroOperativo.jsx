@@ -23,29 +23,30 @@ function TableroOperativo() {
         if (filtroTiempo === 'todo') return listaTareas;
 
         return listaTareas.filter(tarea => {
-            // Si la tarea no tiene fecha de vencimiento, la mostramos para no perderla
+            // Evaluacion de tareas sin fecha de vencimiento
             if (!tarea.fecha_vencimiento) {
-                return true;
+                console.log("[Filtro] Ocultada (Sin fecha):", tarea.titulo);
+                return false; 
             }
 
             const fechaTarea = new Date(tarea.fecha_vencimiento);
             
-            // Verificamos si la fecha es invalida
+            // Evaluacion de fechas con formato invalido en base de datos
             if (isNaN(fechaTarea.getTime())) {
-                return true;
+                console.log("[Filtro] Ocultada (Fecha invalida):", tarea.titulo, tarea.fecha_vencimiento);
+                return false;
             }
 
             const hoy = new Date();
             const diferenciaMilisegundos = hoy - fechaTarea;
             const diasPasados = diferenciaMilisegundos / (1000 * 60 * 60 * 24);
 
-            // Si es una tarea futura o de hoy, la dejamos pasar
-            if (diasPasados <= 0) {
-                return true;
-            }
+            // Calculo de visibilidad segun el rango seleccionado
+            const esVisible = diasPasados <= parseInt(filtroTiempo, 10);
+            
+            console.log("[Filtro] Tarea:", tarea.titulo, "| Dias pasados:", Math.floor(diasPasados), "| Visible:", esVisible);
 
-            // Comprobamos si los dias pasados entran en el filtro seleccionado
-            return diasPasados <= parseInt(filtroTiempo, 10);
+            return esVisible;
         });
     };
 
