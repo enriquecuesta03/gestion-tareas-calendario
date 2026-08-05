@@ -7,6 +7,7 @@ y se las pasa al tablero para que las dibuje en pantalla.
 
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+
 import KanbanBoard from '../features/kanban/KanbanBoard';
 
 function TableroOperativo() {
@@ -15,30 +16,40 @@ function TableroOperativo() {
         manejarDrop, cambiarEstado, editarTarea, borrarTarea, setTareaEnVista, cargarComentarios 
     } = useOutletContext();
 
+    // Estado del filtro: 7 dias por defecto
     const [filtroTiempo, setFiltroTiempo] = useState('7');
 
     const filtrarPorFecha = (listaTareas) => {
         if (filtroTiempo === 'todo') return listaTareas;
 
         return listaTareas.filter(tarea => {
-            // Si la tarea completada no tiene fecha, la ocultamos en los filtros restrictivos 
-            // para que no ensucie, a menos que el usuario marque "Todo el registro"
-            if (!tarea.fecha_vencimiento) return false;
+            // Si la tarea no tiene fecha de vencimiento, la mostramos para no perderla
+            if (!tarea.fecha_vencimiento) {
+                return true;
+            }
 
             const fechaTarea = new Date(tarea.fecha_vencimiento);
-            const hoy = new Date();
             
+            // Verificamos si la fecha es invalida
+            if (isNaN(fechaTarea.getTime())) {
+                return true;
+            }
+
+            const hoy = new Date();
             const diferenciaMilisegundos = hoy - fechaTarea;
             const diasPasados = diferenciaMilisegundos / (1000 * 60 * 60 * 24);
 
-            // Si se completó hace MENOS días de los que marca el filtro, la enseñamos
-            return diasPasados <= parseInt(filtroTiempo);
+            // Si es una tarea futura o de hoy, la dejamos pasar
+            if (diasPasados <= 0) {
+                return true;
+            }
+
+            // Comprobamos si los dias pasados entran en el filtro seleccionado
+            return diasPasados <= parseInt(filtroTiempo, 10);
         });
     };
 
-    // CORRECCIÓN VITAL: Las tareas activas JAMÁS se filtran, solo limpiamos el historial de completadas
-    const porHacerFiltradas = tareasPorHacer;
-    const enProgresoFiltradas = tareasEnProgreso;
+    // Aplicamos el filtro de tiempo unicamente a las tareas completadas
     const completadasFiltradas = filtrarPorFecha(tareasCompletadas);
 
     return (
@@ -70,8 +81,8 @@ function TableroOperativo() {
             </div>
 
             <KanbanBoard 
-                tareasPorHacer={porHacerFiltradas} 
-                tareasEnProgreso={enProgresoFiltradas} 
+                tareasPorHacer={tareasPorHacer} 
+                tareasEnProgreso={tareasEnProgreso} 
                 tareasCompletadas={completadasFiltradas} 
                 columnaDestino={columnaDestino} setColumnaDestino={setColumnaDestino}
                 manejarDrop={manejarDrop} cambiarEstado={cambiarEstado} editarTarea={editarTarea} 
