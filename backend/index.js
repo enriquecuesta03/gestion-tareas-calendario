@@ -8,6 +8,8 @@ y la conexión con la API externa de festivos.
 ***********************************************************************************/
 
 require('dotenv').config();
+process.env.TZ = 'UTC';
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');

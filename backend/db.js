@@ -13,10 +13,12 @@ const connection = mysql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: 25625, // Puerto específico asignado por Aiven
+    port: 25625, // Puerto específico asignado por Aiven[cite: 12]
     ssl: {
-        rejectUnauthorized: false // Seguridad obligatoria activada para conectar con la nube
-    }
+        rejectUnauthorized: false // Seguridad obligatoria activada para conectar con la nube[cite: 12]
+    },
+    dateStrings: true, // Obliga a MySQL a devolver la fecha exacta que escribiste (ej. "23:45") sin alterarla.
+    timezone: 'Z'      // Evita que la base de datos intente sumar o restar horas por su cuenta.
 });
 
 // Intentamos conectarnos y mostramos un mensaje en la consola para saber si ha funcionado
