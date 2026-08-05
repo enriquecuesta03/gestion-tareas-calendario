@@ -15,6 +15,11 @@ function TableroOperativo() {
         manejarDrop, cambiarEstado, editarTarea, borrarTarea, setTareaEnVista, cargarComentarios 
     } = useOutletContext();
 
+    console.log("Datos que llegan desde el padre:", {
+        nombresPorHacer: tareasPorHacer.map(t => t.titulo),
+        nombresEnProgreso: tareasEnProgreso.map(t => t.titulo)
+    });
+
     // Estado del filtro: 7 dias por defecto
     const [filtroTiempo, setFiltroTiempo] = useState('7');
 
@@ -48,7 +53,7 @@ function TableroOperativo() {
             const estaCaducada = diasRestantes < 0;
             const esVisible = estaCaducada || entraEnPlazo;
 
-            console.log(`🔍 [Filtro] "${tarea.titulo}" | Vence en: ${diasRestantes} días | Visible: ${esVisible}`);
+            console.log(`[Filtro] "${tarea.titulo}" | Vence en: ${diasRestantes} días | Visible: ${esVisible}`);
 
             return esVisible;
         });
