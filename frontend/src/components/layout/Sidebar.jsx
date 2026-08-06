@@ -6,7 +6,7 @@ botones para el resumen por voz, las alertas, el filtro de empresas, el cambio
 de tema (claro/oscuro) y la opción de cerrar sesión.
 ***********************************************************************************/
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Importamos los estilos de diseño específicos para esta barra lateral
@@ -36,6 +36,45 @@ function Sidebar({
     // Herramientas para movernos de una pantalla a otra y saber dónde estamos
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Memoria interna para no repetir la misma notificación al sistema operativo
+    const tareasYaNotificadas = useRef(new Set());
+
+    // =======================================================
+    // MOTOR DE NOTIFICACIONES NATIVAS DEL SISTEMA
+    // =======================================================
+    useEffect(() => {
+        // 1. Si el navegador soporta notificaciones, pedimos permiso al usuario
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // 2. Si nos han dado permiso, lanzamos la alerta nativa al sistema operativo
+        if ('Notification' in window && Notification.permission === 'granted') {
+            notificacionesPendientes.forEach(tarea => {
+                // Comprobamos si esta tarea ya la hemos notificado antes para no hacer spam
+                if (!tareasYaNotificadas.current.has(tarea.id)) {
+                    
+                    // Disparamos la notificación de Windows / Mac / Android
+                    const notificacion = new Notification('Kora - Tarea Pendiente', {
+                        body: tarea.titulo,
+                        icon: '/favicon.ico', // Puedes poner la ruta al logo de tu app si tienes uno
+                        requireInteraction: true // Hace que la notificación no desaparezca sola rápido
+                    });
+
+                    // Si el usuario hace clic en la notificación flotante del sistema, abre la tarea
+                    notificacion.onclick = () => {
+                        window.focus(); // Trae el navegador al frente
+                        onVerNotificacion(tarea);
+                    };
+
+                    // Guardamos el ID en la memoria para no volver a pitar por esta tarea
+                    tareasYaNotificadas.current.add(tarea.id);
+                }
+            });
+        }
+    }, [notificacionesPendientes, onVerNotificacion]);
+    // =======================================================
 
     // Función para saber en qué pantalla estamos y poder marcar el botón correspondiente
     const isActive = (path) => location.pathname.includes(path);
