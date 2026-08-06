@@ -140,7 +140,7 @@ router.delete('/:grupoId/miembros/:miembroId', verificarToken, (req, res) => {
     });
 });
 
-// 7. ASCENDER A JEFE (Solo Jefe)
+// 7. CAMBIAR ROL DE UN MIEMBRO (Solo Jefe)
 router.put('/:grupoId/miembros/:miembroId/rol', verificarToken, (req, res) => {
     const { grupoId, miembroId } = req.params;
     const { rol } = req.body;
@@ -148,12 +148,12 @@ router.put('/:grupoId/miembros/:miembroId/rol', verificarToken, (req, res) => {
 
     db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
         if (err || results.length === 0 || results[0].rol !== 'jefe') {
-            return res.status(403).json({ error: 'Solo un jefe puede ascender a otros compañeros' });
+            return res.status(403).json({ error: 'Solo un jefe puede modificar los roles de sus compañeros' });
         }
 
         db.query('UPDATE grupo_usuarios SET rol = ? WHERE grupo_id = ? AND usuario_id = ?', [rol, grupoId, miembroId], (err) => {
             if (err) return res.status(500).json({ error: 'Error de SQL al cambiar el rol' });
-            res.json({ mensaje: 'Compañero ascendido a Jefe correctamente' });
+            res.json({ mensaje: 'El rol ha sido actualizado correctamente' });
         });
     });
 });

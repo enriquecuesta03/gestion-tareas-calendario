@@ -3,7 +3,7 @@ Pantalla de gestión de Equipos y Empresas (DirectorioEmpresas).
 Esta vista exclusiva permite al usuario ver los grupos a los que pertenece,
 revisar quiénes son los miembros y sus roles, unirse a nuevos equipos mediante
 códigos de invitación, crear empresas nuevas y notificar ausencias.
-Incluye controles de administración para los jefes (expulsar, ascender, borrar).
+Incluye controles de administración para los jefes (expulsar, ascender, degradar, borrar).
 ***********************************************************************************/
 
 import { useState, useEffect } from 'react';
@@ -20,20 +20,15 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
 
   const [menuAbierto, setMenuAbierto] = useState(false); 
 
-  // Variables para la gestión de las empresas y grupos
   const [misGrupos, setMisGrupos] = useState([]);
   const [miembrosPorGrupo, setMiembrosPorGrupo] = useState({});
   const [nombreNuevoGrupo, setNombreNuevoGrupo] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
 
-  // Variables para registrar cuándo nos vamos de vacaciones
   const [vacacionGrupoId, setVacacionGrupoId] = useState('');
   const [vacacionInicio, setVacacionInicio] = useState('');
   const [vacacionFin, setVacacionFin] = useState('');
 
-  // ==========================================
-  // HERRAMIENTAS Y ASISTENTE
-  // ==========================================
   const { tareas, headersConAuth, notificarExito, notificarError } = useTareas(token, onLogout);
   
   const { hablando, procesando, reproducirResumen } = useKoraAI({
@@ -44,9 +39,7 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
       if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
       return Date.now() >= new Date(tarea.fecha_notificacion).getTime();
   });
-  // ==========================================
 
-  // Carga la información principal de los grupos desde la base de datos
   const cargarMisGrupos = () => {
     fetch(`${API_URL}/api/grupos`, { headers: headersConAuth() })
     .then(res => res.json())
@@ -72,7 +65,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   // ACCIONES ADMINISTRATIVAS DE LA EMPRESA
   // ==========================================
 
-  // Crear o unirse
   const manejarCrearGrupo = (e) => {
     e.preventDefault();
     fetch(`${API_URL}/api/grupos`, {
@@ -93,7 +85,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
     });
   };
 
-  // 🔴 JEFE: Eliminar empresa entera
   const manejarEliminarGrupo = (id, nombre) => {
       if (!window.confirm(`¿Seguro que quieres eliminar el equipo "${nombre}" por completo? Esta acción es irreversible.`)) return;
       fetch(`${API_URL}/api/grupos/${id}`, { method: 'DELETE', headers: headersConAuth() })
@@ -104,7 +95,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
       }).catch(() => notificarError('Error de conexión al eliminar'));
   };
 
-  // 🔴 JEFE: Expulsar a un miembro
   const manejarExpulsarMiembro = (grupoId, miembroId, nombre) => {
       if (!window.confirm(`¿Seguro que quieres expulsar a ${nombre} del equipo?`)) return;
       fetch(`${API_URL}/api/grupos/${grupoId}/miembros/${miembroId}`, { method: 'DELETE', headers: headersConAuth() })
@@ -115,20 +105,21 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
       }).catch(() => notificarError('Error de conexión al expulsar'));
   };
 
-  // 🟢 JEFE: Ascender a un miembro
-  const manejarAscenderMiembro = (grupoId, miembroId, nombre) => {
-      if (!window.confirm(`¿Ascender a ${nombre} a Jefe de equipo? Tendrá los mismos permisos que tú.`)) return;
+  // Función combinada para ascender y degradar roles
+  const manejarCambiarRol = (grupoId, miembroId, nombre, nuevoRol) => {
+      const accion = nuevoRol === 'jefe' ? 'ascender a Jefe a' : 'degradar a Empleado a';
+      if (!window.confirm(`¿Seguro que quieres ${accion} ${nombre}?`)) return;
+      
       fetch(`${API_URL}/api/grupos/${grupoId}/miembros/${miembroId}/rol`, { 
-          method: 'PUT', headers: headersConAuth(), body: JSON.stringify({ rol: 'jefe' })
+          method: 'PUT', headers: headersConAuth(), body: JSON.stringify({ rol: nuevoRol })
       })
       .then(res => res.json().then(data => ({ status: res.status, body: data })))
       .then(({ status, body }) => {
-          if (status === 200) { notificarExito(`${nombre} ahora es Jefe de equipo`); cargarMisGrupos(); }
-          else { notificarError(body.error || 'Error al ascender al miembro'); }
-      }).catch(() => notificarError('Error de conexión al ascender'));
+          if (status === 200) { notificarExito(`El rol de ${nombre} ha sido actualizado`); cargarMisGrupos(); }
+          else { notificarError(body.error || 'Error al cambiar el rol'); }
+      }).catch(() => notificarError('Error de conexión al cambiar rol'));
   };
 
-  // 🟡 EMPLEADO: Salir de la empresa voluntariamente
   const manejarSalirGrupo = (id, nombre) => {
       if (!window.confirm(`¿Seguro que quieres abandonar el equipo "${nombre}"?`)) return;
       fetch(`${API_URL}/api/grupos/${id}/salir`, { method: 'POST', headers: headersConAuth() })
@@ -139,7 +130,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
       }).catch(() => notificarError('Error de conexión al salir'));
   };
 
-  // Ausencias
   const manejarCrearVacacion = (e) => {
       e.preventDefault();
       if (vacacionFin < vacacionInicio) return notificarError('La fecha de fin no puede ser anterior a la de inicio');
@@ -168,6 +158,8 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
         .btn-accion-rol { border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
         .btn-ascender { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); border-color: rgba(16, 185, 129, 0.3); }
         .btn-ascender:hover { background: rgba(16, 185, 129, 0.2); }
+        .btn-degradar { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+        .btn-degradar:hover { background: rgba(245, 158, 11, 0.2); }
         .btn-expulsar { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); border-color: rgba(239, 68, 68, 0.3); }
         .btn-expulsar:hover { background: rgba(239, 68, 68, 0.2); }
         
@@ -225,7 +217,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
                       {misGrupos.map(grupo => (
                           <div key={grupo.id} style={{ backgroundColor: 'var(--bg-body)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                               
-                              {/* Cabecera del Equipo */}
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
                                   <div>
                                       <strong style={{ fontSize: '1.2rem', display: 'block', color: 'var(--text-main)', marginBottom: '4px' }}>{grupo.nombre}</strong>
@@ -237,7 +228,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
                                           {grupo.rol}
                                       </span>
                                       
-                                      {/* Controles Principales del Equipo según tu rol */}
                                       {grupo.rol === 'jefe' ? (
                                           <button onClick={() => manejarEliminarGrupo(grupo.id, grupo.nombre)} style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '5px' }} title="Eliminar equipo de Kora">
                                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -257,20 +247,25 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
                                       miembrosPorGrupo[grupo.id].map(miembro => (
                                           <div key={miembro.id} className="miembro-fila flex-responsive">
                                               
-                                              <div style={{ flex: 1, marginBottom: '5px' }}>
-                                                  <span style={{ color: 'var(--text-main)', fontWeight: '500', fontSize: '0.95rem', display: 'block' }}>
+                                              <div style={{ flex: 1, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                  <span style={{ color: 'var(--text-main)', fontWeight: '600', fontSize: '1rem', display: 'block' }}>
                                                       {miembro.nombre} 
                                                       {miembro.nombre === nombreUsuario && <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>(Tú)</span>}
                                                   </span>
-                                                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{miembro.rol}</span>
+                                                  <span style={{ backgroundColor: miembro.rol === 'jefe' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: miembro.rol === 'jefe' ? 'var(--accent-green)' : 'var(--text-muted)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                      {miembro.rol}
+                                                  </span>
                                               </div>
 
-                                              {/* Botones de Jefe (Solo se muestran si eres jefe y no eres tú mismo) */}
                                               {grupo.rol === 'jefe' && miembro.nombre !== nombreUsuario && (
                                                   <div className="acciones-miembro-movil" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                      {miembro.rol !== 'jefe' && (
-                                                          <button onClick={() => manejarAscenderMiembro(grupo.id, miembro.id, miembro.nombre)} className="btn-accion-rol btn-ascender">
+                                                      {miembro.rol !== 'jefe' ? (
+                                                          <button onClick={() => manejarCambiarRol(grupo.id, miembro.id, miembro.nombre, 'jefe')} className="btn-accion-rol btn-ascender">
                                                               Ascender a Jefe
+                                                          </button>
+                                                      ) : (
+                                                          <button onClick={() => manejarCambiarRol(grupo.id, miembro.id, miembro.nombre, 'empleado')} className="btn-accion-rol btn-degradar">
+                                                              Degradar a Empleado
                                                           </button>
                                                       )}
                                                       <button onClick={() => manejarExpulsarMiembro(grupo.id, miembro.id, miembro.nombre)} className="btn-accion-rol btn-expulsar">
