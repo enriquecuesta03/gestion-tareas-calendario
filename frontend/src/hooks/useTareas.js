@@ -3,7 +3,7 @@ Herramienta central de gestión de datos (useTareas).
 Este archivo funciona como el motor de la aplicación. Es el encargado de 
 comunicarse con el servidor para pedir, guardar, actualizar y borrar todas 
 las tareas, empresas, vacaciones y comentarios. También maneja la lógica para 
-repetir tareas automáticamente y controla los avisos que saltan en el ordenador.
+repetir tareas automáticamente.
 ***********************************************************************************/
 
 import { useState, useEffect } from 'react';
@@ -113,35 +113,13 @@ export function useTareas(token, onLogout) {
         } catch (error) { console.error(error); }
     };
 
-    // 6. Arranque inicial y sistema de alertas del ordenador
+    // 6. Arranque inicial
     useEffect(() => {
         if (token) {
             // Nada más iniciar sesión, traemos todos los datos principales
             cargarTareas(); cargarMisGrupos(); cargarFestivos(); cargarVacaciones();
-            
-            // Le pedimos permiso al usuario para mostrarle notificaciones en su sistema operativo
-            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') Notification.requestPermission(); 
         }
     }, [token]);
-
-    // Un cronómetro oculto que revisa cada minuto si alguna tarea ha llegado a su fecha de aviso
-    useEffect(() => {
-        if (!token) return;
-        const intervalo = setInterval(() => {
-            if (Notification.permission === 'granted') {
-                const ahora = Date.now();
-                tareas.forEach(tarea => {
-                    // Comprobamos si la alerta de la tarea tiene que sonar justo en este minuto exacto
-                    if (tarea.estado !== 'Completado' && tarea.fecha_notificacion && (ahora >= new Date(tarea.fecha_notificacion).getTime()) && (ahora - new Date(tarea.fecha_notificacion).getTime() < 60000)) { 
-                        new Notification("Recordatorio", { body: `Pendiente: ${tarea.titulo}` }); 
-                    }
-                });
-            }
-        }, 60000);
-        
-        // Apagamos el cronómetro si el usuario cierra la aplicación
-        return () => clearInterval(intervalo);
-    }, [tareas, token]);
 
     return {
         tareas, festivos, vacaciones, misGrupos, comentarios,

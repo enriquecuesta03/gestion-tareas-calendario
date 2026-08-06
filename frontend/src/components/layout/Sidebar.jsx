@@ -49,7 +49,7 @@ function Sidebar({
         }
 
         if ('Notification' in window && Notification.permission === 'granted') {
-            notificacionesPendientes.forEach(tarea => {
+            notificacionesPendientes.forEach((tarea, index) => {
                 
                 // Creamos una clave única que une el ID de la tarea y su hora exacta de aviso
                 const tiempoAlarma = new Date(tarea.fecha_notificacion).getTime();
@@ -66,16 +66,20 @@ function Sidebar({
                         });
                     }
 
-                    const notificacion = new Notification('Tarea por hacer', {
-                        body: tarea.titulo + '\nCaduca el: ' + textoCaducidad,
-                        icon: '/favicon.png',
-                        requireInteraction: true 
-                    });
+                    // Retrasamos cada notificación 1.5 segundos (1500ms * posición)
+                    // para que el sistema operativo no las agrupe ni las borre por salir a la vez.
+                    setTimeout(() => {
+                        const notificacion = new Notification('Tarea por hacer', {
+                            body: tarea.titulo + '\nCaduca el: ' + textoCaducidad,
+                            icon: '/favicon.png',
+                            requireInteraction: true 
+                        });
 
-                    notificacion.onclick = () => {
-                        window.focus(); 
-                        onVerNotificacion(tarea);
-                    };
+                        notificacion.onclick = () => {
+                            window.focus(); 
+                            onVerNotificacion(tarea);
+                        };
+                    }, index * 1500);
 
                     // Guardamos la clave en el navegador para que ninguna otra pestaña la repita
                     localStorage.setItem(claveNotificacion, 'true');
