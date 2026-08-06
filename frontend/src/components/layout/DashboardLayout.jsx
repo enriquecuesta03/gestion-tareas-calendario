@@ -127,10 +127,12 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     if (token) fetch(`${API_URL}/api/perfil`, { headers: headersConAuth() }).then(res => res.json()).then(data => { if (data.fecha_nac_limpia) { setFechaNacUsuario(data.fecha_nac_limpia); localStorage.setItem('fechaNacUsuario', data.fecha_nac_limpia); } }).catch(console.error);
   }, [token]);
 
-  // CORRECCION 1: Eliminamos la matematica que sumaba la zona horaria. Rompemos la Z internacional.
+// CORRECCIÓN 1: Eliminamos la matemática de zona horaria y forzamos la 'T' para los formularios
   const obtenerFechaHoraLocalStr = (fechaIso) => { 
       if (!fechaIso) return ''; 
-      return fechaIso.split('.')[0].replace('Z', '').slice(0, 16); 
+      // Reemplazamos el espacio por una 'T' si viene de la base de datos
+      const textoConT = typeof fechaIso === 'string' ? fechaIso.replace(' ', 'T') : fechaIso;
+      return textoConT.split('.')[0].replace('Z', '').slice(0, 16); 
   };
   
   // CORRECCION 2: Evaluamos limpiando espacios y la Z
