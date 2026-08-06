@@ -40,7 +40,7 @@ function Sidebar({
     // Memoria interna para no repetir la misma notificación al sistema operativo
     const tareasYaNotificadas = useRef(new Set());
 
-    // =======================================================
+// =======================================================
     // MOTOR DE NOTIFICACIONES NATIVAS DEL SISTEMA
     // =======================================================
     useEffect(() => {
@@ -52,14 +52,23 @@ function Sidebar({
         // 2. Si nos han dado permiso, lanzamos la alerta nativa al sistema operativo
         if ('Notification' in window && Notification.permission === 'granted') {
             notificacionesPendientes.forEach(tarea => {
-                // Comprobamos si esta tarea ya la hemos notificado antes para no hacer spam
+                // Comprobamos si esta tarea ya la hemos notificado antes para no repetir
                 if (!tareasYaNotificadas.current.has(tarea.id)) {
                     
-                    // Disparamos la notificación de Windows / Mac / Android
-                    const notificacion = new Notification('Kora - Tarea Pendiente', {
-                        body: tarea.titulo,
-                        icon: '/favicon.ico', // Puedes poner la ruta al logo de tu app si tienes uno
-                        requireInteraction: true // Hace que la notificación no desaparezca sola rápido
+                    // Formateamos la fecha de caducidad si la tiene
+                    let textoCaducidad = 'Sin fecha límite';
+                    if (tarea.fecha_vencimiento) {
+                        textoCaducidad = new Date(tarea.fecha_vencimiento).toLocaleString('es-ES', { 
+                            dateStyle: 'short', 
+                            timeStyle: 'short' 
+                        });
+                    }
+
+                    // Disparamos la notificación nativa de Windows / Mac / Android
+                    const notificacion = new Notification('Tarea por hacer', {
+                        body: tarea.titulo + '\nCaduca el: ' + textoCaducidad,
+                        icon: '/favicon.png',
+                        requireInteraction: true 
                     });
 
                     // Si el usuario hace clic en la notificación flotante del sistema, abre la tarea
@@ -68,7 +77,7 @@ function Sidebar({
                         onVerNotificacion(tarea);
                     };
 
-                    // Guardamos el ID en la memoria para no volver a pitar por esta tarea
+                    // Guardamos el ID en la memoria para no volver a avisar por esta tarea
                     tareasYaNotificadas.current.add(tarea.id);
                 }
             });
