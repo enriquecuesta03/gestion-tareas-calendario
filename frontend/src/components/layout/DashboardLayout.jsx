@@ -56,6 +56,16 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const [filtroVista, setFiltroVista] = useState('todas'); 
   const [columnaDestino, setColumnaDestino] = useState(null);
 
+  // LÓGICA DE TIEMPO REAL: Un reloj oculto que avanza para revisar las notificaciones cada 15 segundos
+  const [relojInterno, setRelojInterno] = useState(Date.now());
+
+  useEffect(() => {
+      const intervalo = setInterval(() => {
+          setRelojInterno(Date.now());
+      }, 15000); 
+      return () => clearInterval(intervalo);
+  }, []);
+
   const { 
       tareas, festivos, vacaciones, misGrupos, comentarios,
       cargarComentarios, guardarTarea, borrarTarea, cambiarEstado, 
@@ -127,23 +137,21 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     if (token) fetch(`${API_URL}/api/perfil`, { headers: headersConAuth() }).then(res => res.json()).then(data => { if (data.fecha_nac_limpia) { setFechaNacUsuario(data.fecha_nac_limpia); localStorage.setItem('fechaNacUsuario', data.fecha_nac_limpia); } }).catch(console.error);
   }, [token]);
 
-// CORRECCIÓN 1: Eliminamos la matemática de zona horaria y forzamos la 'T' para los formularios
+  // CORRECCION 1: Eliminamos la matematica que sumaba la zona horaria. Rompemos la Z internacional y forzamos la T
   const obtenerFechaHoraLocalStr = (fechaIso) => { 
       if (!fechaIso) return ''; 
-      // Reemplazamos el espacio por una 'T' si viene de la base de datos
       const textoConT = typeof fechaIso === 'string' ? fechaIso.replace(' ', 'T') : fechaIso;
       return textoConT.split('.')[0].replace('Z', '').slice(0, 16); 
   };
   
-  // CORRECCION 2: Evaluamos limpiando espacios y la Z
+  // CORRECCION 2: Usamos el relojInterno en lugar de Date.now() directo para que el componente evalue el tiempo real
   const notificacionesPendientes = tareas.filter(tarea => {
       if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
       
-      // Cambiamos el espacio por una T y quitamos la Z si la hay
       const textoSeguro = tarea.fecha_notificacion.replace(' ', 'T');
       const fechaLimpia = textoSeguro.endsWith('Z') ? textoSeguro.slice(0, -1) : textoSeguro;
       
-      return Date.now() >= new Date(fechaLimpia).getTime();
+      return relojInterno >= new Date(fechaLimpia).getTime();
   });
 
   const tareasFiltradas = tareas.filter(tarea => filtroVista === 'todas' ? true : (filtroVista === 'personal' ? tarea.grupo_id === null : String(tarea.grupo_id) === String(filtroVista)));
@@ -189,32 +197,6 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   });
   
   const datosGraficoEstado = [ { name: 'Por Hacer', value: tareasPorHacer.length, color: '#ef4444' }, { name: 'En Progreso', value: tareasEnProgreso.length, color: '#3b82f6' }, { name: 'Completado', value: tareasCompletadas.length, color: '#10b981' } ];
-
-
-  // CHIVATO MODO DEBUG: NOTIFICACIONES
-  useEffect(() => {
-      console.log("=== DEBUG DE NOTIFICACIONES ===");
-      const ahora = Date.now();
-      console.log("Reloj actual del navegador:", new Date().toLocaleString());
-      
-      tareas.forEach(tarea => {
-          if (tarea.fecha_notificacion) {
-              const textoBBDD = tarea.fecha_notificacion;
-              // Forzamos la T para que navegadores como Safari o Chrome no den Invalid Date
-              const textoConT = typeof textoBBDD === 'string' ? textoBBDD.replace(' ', 'T') : textoBBDD;
-              const fechaLimpia = textoConT.endsWith('Z') ? textoConT.slice(0, -1) : textoConT;
-              const milisegundosAlarma = new Date(fechaLimpia).getTime();
-              
-              console.log(`[Tarea] "${tarea.titulo}"`);
-              console.log(`   - Texto crudo BBDD: ${textoBBDD}`);
-              console.log(`   - Estado: ${tarea.estado}`);
-              console.log(`   - Fecha calculada: ${new Date(fechaLimpia).toLocaleString()} | Valida: ${!isNaN(milisegundosAlarma)}`);
-              console.log(`   - Deberia saltar?: ${ahora >= milisegundosAlarma ? 'SI' : 'NO'}`);
-          }
-      });
-      console.log("==================================");
-  }, [tareas]);
-
 
   return (
     <div className="app-layout">
