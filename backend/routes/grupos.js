@@ -2,7 +2,8 @@
 Archivo de rutas para los grupos y empresas (grupos.js).
 Aquí se maneja todo lo relacionado con las empresas: crear un grupo nuevo, 
 generar códigos de invitación para los trabajadores, unirse a una empresa 
-existente y ver la lista de miembros para poder asignarles tareas.
+existente, ver la lista de miembros y gestionar la administración del equipo
+(eliminar empresa, expulsar miembros, ascender a jefe y salir del equipo).
 ***********************************************************************************/
 
 const express = require('express');
@@ -98,6 +99,73 @@ router.get('/:id/miembros', verificarToken, (req, res) => {
             if (err) return res.status(500).json({ error: 'Error al obtener miembros' });
             res.json(miembros);
         });
+    });
+});
+
+// ==========================================
+// NUEVAS RUTAS DE ADMINISTRACIÓN
+// ==========================================
+
+// 5. ELIMINAR EL GRUPO ENTERO (Solo Jefe)
+router.delete('/:id', verificarToken, (req, res) => {
+    const grupoId = req.params.id;
+    const usuarioId = req.user.id;
+
+    db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
+        if (err || results.length === 0 || results[0].rol !== 'jefe') {
+            return res.status(403).json({ error: 'Solo el jefe puede eliminar la empresa' });
+        }
+
+        db.query('DELETE FROM grupos WHERE id = ?', [grupoId], (err) => {
+            if (err) return res.status(500).json({ error: 'Error de SQL al eliminar el equipo' });
+            res.json({ mensaje: 'Equipo eliminado con éxito' });
+        });
+    });
+});
+
+// 6. EXPULSAR A UN MIEMBRO (Solo Jefe)
+router.delete('/:grupoId/miembros/:miembroId', verificarToken, (req, res) => {
+    const { grupoId, miembroId } = req.params;
+    const usuarioId = req.user.id;
+
+    db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
+        if (err || results.length === 0 || results[0].rol !== 'jefe') {
+            return res.status(403).json({ error: 'Solo un jefe puede expulsar miembros' });
+        }
+
+        db.query('DELETE FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, miembroId], (err) => {
+            if (err) return res.status(500).json({ error: 'Error de SQL al expulsar al miembro' });
+            res.json({ mensaje: 'Miembro expulsado del equipo' });
+        });
+    });
+});
+
+// 7. ASCENDER A JEFE (Solo Jefe)
+router.put('/:grupoId/miembros/:miembroId/rol', verificarToken, (req, res) => {
+    const { grupoId, miembroId } = req.params;
+    const { rol } = req.body;
+    const usuarioId = req.user.id;
+
+    db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
+        if (err || results.length === 0 || results[0].rol !== 'jefe') {
+            return res.status(403).json({ error: 'Solo un jefe puede ascender a otros compañeros' });
+        }
+
+        db.query('UPDATE grupo_usuarios SET rol = ? WHERE grupo_id = ? AND usuario_id = ?', [rol, grupoId, miembroId], (err) => {
+            if (err) return res.status(500).json({ error: 'Error de SQL al cambiar el rol' });
+            res.json({ mensaje: 'Compañero ascendido a Jefe correctamente' });
+        });
+    });
+});
+
+// 8. SALIR VOLUNTARIAMENTE DEL EQUIPO
+router.post('/:id/salir', verificarToken, (req, res) => {
+    const grupoId = req.params.id;
+    const usuarioId = req.user.id;
+
+    db.query('DELETE FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err) => {
+        if (err) return res.status(500).json({ error: 'Error de SQL al salir del equipo' });
+        res.json({ mensaje: 'Has abandonado el equipo' });
     });
 });
 
