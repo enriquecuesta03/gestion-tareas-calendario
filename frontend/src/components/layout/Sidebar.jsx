@@ -229,7 +229,7 @@ function Sidebar({
                         </div>
 
                         {/* Botón para ver las notificaciones de tareas pendientes */}
-                        <div style={{ position: 'relative', marginTop: '10px' }}>
+                        <div style={{ marginTop: '10px' }}>
                             <button 
                                 onClick={() => setMostrarNotificaciones(!mostrarNotificaciones)} 
                                 style={{ 
@@ -273,16 +273,16 @@ function Sidebar({
                                 )}
                             </button>
                             
-                            {/* Caja desplegable con la lista de notificaciones */}
+                            {/* Caja desplegable (Convertida a Acordeón para evitar cortes de CSS) */}
                             {mostrarNotificaciones && (
-                                <div style={{ position: 'absolute', top: '100%', left: '10px', width: '250px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '15px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', zIndex: 100 }}>
+                                <div style={{ marginTop: '8px', width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', boxSizing: 'border-box' }}>
                                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', color: 'var(--text-main)' }}>
                                         Notificaciones
                                     </h4>
                                     {notificacionesPendientes.length === 0 ? (
                                         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Sin alertas.</p>
                                     ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
                                             {notificacionesPendientes.map(t => (
                                                 <div 
                                                     key={t.id} 
