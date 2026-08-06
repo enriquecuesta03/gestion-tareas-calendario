@@ -19,6 +19,7 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import TableroOperativo from './views/TableroOperativo';
 import AnalisisMetricas from './views/AnalisisMetricas';
 import Perfil from './views/Perfil';
+import DirectorioEmpresas from './views/DirectorioEmpresas'; // 🔥 Aquí importamos la nueva vista
 
 import "./assets/styles/App.css";
 
@@ -89,6 +90,9 @@ function App() {
 
           {/* Ruta para ver y editar el perfil del usuario */}
           <Route path="/perfil" element={token ? <Perfil token={token} nombreUsuario={nombreUsuario} onLogout={cerrarSesion} temaOscuro={temaOscuro} setTemaOscuro={setTemaOscuro} /> : <Navigate to="/login" replace />} />
+          
+          {/* 🔥 NUEVA RUTA: Directorio de Empresas */}
+          <Route path="/empresas" element={token ? <DirectorioEmpresas token={token} nombreUsuario={nombreUsuario} onLogout={cerrarSesion} temaOscuro={temaOscuro} setTemaOscuro={setTemaOscuro} /> : <Navigate to="/login" replace />} />
           
           {/* Pantalla de error por si el usuario escribe una URL que no existe */}
           <Route path="*" element={
