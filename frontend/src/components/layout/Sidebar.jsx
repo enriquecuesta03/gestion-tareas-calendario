@@ -40,22 +40,24 @@ function Sidebar({
     // Memoria interna para no repetir la misma notificación al sistema operativo
     const tareasYaNotificadas = useRef(new Set());
 
-// =======================================================
+    // =======================================================
     // MOTOR DE NOTIFICACIONES NATIVAS DEL SISTEMA
     // =======================================================
     useEffect(() => {
-        // 1. Si el navegador soporta notificaciones, pedimos permiso al usuario
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
 
-        // 2. Si nos han dado permiso, lanzamos la alerta nativa al sistema operativo
         if ('Notification' in window && Notification.permission === 'granted') {
             notificacionesPendientes.forEach(tarea => {
-                // Comprobamos si esta tarea ya la hemos notificado antes para no repetir
-                if (!tareasYaNotificadas.current.has(tarea.id)) {
+                
+                // Creamos una clave única que une el ID de la tarea y su hora exacta de aviso
+                const tiempoAlarma = new Date(tarea.fecha_notificacion).getTime();
+                const claveNotificacion = 'alerta_enviada_' + tarea.id + '_' + tiempoAlarma;
+                
+                // Comprobamos en el almacenamiento global del navegador si ESTA alerta ya saltó
+                if (!localStorage.getItem(claveNotificacion)) {
                     
-                    // Formateamos la fecha de caducidad si la tiene
                     let textoCaducidad = 'Sin fecha límite';
                     if (tarea.fecha_vencimiento) {
                         textoCaducidad = new Date(tarea.fecha_vencimiento).toLocaleString('es-ES', { 
@@ -64,21 +66,19 @@ function Sidebar({
                         });
                     }
 
-                    // Disparamos la notificación nativa de Windows / Mac / Android
                     const notificacion = new Notification('Tarea por hacer', {
                         body: tarea.titulo + '\nCaduca el: ' + textoCaducidad,
                         icon: '/favicon.png',
                         requireInteraction: true 
                     });
 
-                    // Si el usuario hace clic en la notificación flotante del sistema, abre la tarea
                     notificacion.onclick = () => {
-                        window.focus(); // Trae el navegador al frente
+                        window.focus(); 
                         onVerNotificacion(tarea);
                     };
 
-                    // Guardamos el ID en la memoria para no volver a avisar por esta tarea
-                    tareasYaNotificadas.current.add(tarea.id);
+                    // Guardamos la clave en el navegador para que ninguna otra pestaña la repita
+                    localStorage.setItem(claveNotificacion, 'true');
                 }
             });
         }
