@@ -8,6 +8,7 @@ códigos de invitación, crear empresas nuevas y notificar ausencias.
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
+import { Toaster } from 'react-hot-toast';
 
 import { useTareas } from '../hooks/useTareas';
 import { useKoraAI } from '../hooks/useKoraAI';
@@ -17,7 +18,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
 
   const [menuAbierto, setMenuAbierto] = useState(false); 
-  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
   // Variables para la gestión de las empresas y grupos
   const [misGrupos, setMisGrupos] = useState([]);
@@ -33,7 +33,7 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   // ==========================================
   // HERRAMIENTAS Y ASISTENTE
   // ==========================================
-  const { tareas, headersConAuth } = useTareas(token, onLogout);
+  const { tareas, headersConAuth, notificarExito, notificarError } = useTareas(token, onLogout);
   
   const { hablando, procesando, reproducirResumen } = useKoraAI({
       token, nombreUsuario, tareas, formulariosActions: { estadoActual: {} } 
@@ -45,7 +45,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   });
   // ==========================================
 
-  // Función para pedirle al servidor las empresas y, a continuación, los miembros de cada una
   const cargarMisGrupos = () => {
     fetch(`${API_URL}/api/grupos`, { headers: headersConAuth() })
     .then(res => res.json())
@@ -53,7 +52,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
         const grupos = Array.isArray(data) ? data : [];
         setMisGrupos(grupos);
         
-        // Una vez tenemos los grupos, pedimos los miembros de cada uno
         grupos.forEach(grupo => {
             fetch(`${API_URL}/api/grupos/${grupo.id}/miembros`, { headers: headersConAuth() })
             .then(res => res.json())
@@ -69,28 +67,38 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   }, [token]);
 
   const manejarCrearGrupo = (e) => {
-    e.preventDefault(); setMensaje({ texto: '', tipo: '' });
+    e.preventDefault();
     fetch(`${API_URL}/api/grupos`, {
       method: 'POST', headers: headersConAuth(), body: JSON.stringify({ nombre: nombreNuevoGrupo })
     }).then(res => res.json().then(data => ({ status: res.status, body: data }))).then(({ status, body }) => {
-      if (status === 200) { setMensaje({ texto: `Empresa creada. Código: ${body.codigo}`, tipo: 'exito' }); setNombreNuevoGrupo(''); cargarMisGrupos(); } 
-      else { setMensaje({ texto: body.error, tipo: 'error' }); }
+      if (status === 200) { 
+          notificarExito(`Empresa creada. Código: ${body.codigo}`); 
+          setNombreNuevoGrupo(''); 
+          cargarMisGrupos(); 
+      } else { 
+          notificarError(body.error); 
+      }
     });
   };
 
   const manejarUnirseGrupo = (e) => {
-    e.preventDefault(); setMensaje({ texto: '', tipo: '' });
+    e.preventDefault();
     fetch(`${API_URL}/api/grupos/unirse`, {
       method: 'POST', headers: headersConAuth(), body: JSON.stringify({ codigo: codigoInvitacion })
     }).then(res => res.json().then(data => ({ status: res.status, body: data }))).then(({ status, body }) => {
-      if (status === 200) { setMensaje({ texto: body.mensaje, tipo: 'exito' }); setCodigoInvitacion(''); cargarMisGrupos(); } 
-      else { setMensaje({ texto: body.error, tipo: 'error' }); }
+      if (status === 200) { 
+          notificarExito(body.mensaje); 
+          setCodigoInvitacion(''); 
+          cargarMisGrupos(); 
+      } else { 
+          notificarError(body.error); 
+      }
     });
   };
 
   const manejarCrearVacacion = (e) => {
-      e.preventDefault(); setMensaje({ texto: '', tipo: '' });
-      if (vacacionFin < vacacionInicio) return setMensaje({ texto: 'La fecha de fin no puede ser anterior a la de inicio', tipo: 'error' });
+      e.preventDefault();
+      if (vacacionFin < vacacionInicio) return notificarError('La fecha de fin no puede ser anterior a la de inicio');
 
       fetch(`${API_URL}/api/vacaciones`, {
           method: 'POST',
@@ -99,16 +107,20 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
       })
       .then(res => res.json())
       .then(data => {
-          if(data.error) setMensaje({texto: data.error, tipo: 'error'});
-          else {
-              setMensaje({texto: data.mensaje, tipo: 'exito'});
-              setVacacionInicio(''); setVacacionFin(''); setVacacionGrupoId('');
+          if (data.error) {
+              notificarError(data.error);
+          } else {
+              notificarExito(data.mensaje || "Ausencia registrada correctamente");
+              setVacacionInicio(''); 
+              setVacacionFin(''); 
+              setVacacionGrupoId('');
           }
       });
   };
 
   return (
     <div className="app-layout">
+      <Toaster position="bottom-right" />
       
       <style>{`
         .native-card { background-color: var(--bg-card); border-radius: 16px; padding: 25px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; width: 100%; box-sizing: border-box; }
@@ -159,12 +171,6 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
           <h2 className="section-title" style={{ fontSize: '1.5rem', borderBottom: 'none', marginBottom: '20px' }}>
             Directorio de Equipos
           </h2>
-
-          {mensaje.texto && (
-              <div style={{ padding: '15px', marginBottom: '25px', borderRadius: '12px', backgroundColor: mensaje.tipo === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: mensaje.tipo === 'error' ? 'var(--danger-color)' : 'var(--accent-green)', fontWeight: '500', border: `1px solid ${mensaje.tipo === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {mensaje.texto}
-              </div>
-          )}
 
           <div className="native-card">
               <h2 className="section-title" style={{ borderBottom: 'none', marginBottom: '10px' }}>Mis Empresas</h2>
