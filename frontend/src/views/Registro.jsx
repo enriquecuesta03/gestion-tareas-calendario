@@ -10,6 +10,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'; 
 
+import DatePicker, { registerLocale } from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import es from 'date-fns/locale/es';
+
+registerLocale('es', es);
+
 // Claves de identificación para poder usar los sistemas de Google y GitHub
 const GOOGLE_CLIENT_ID = '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com';
 const GITHUB_CLIENT_ID = 'Ov23liHuJKItfZMT9Qks';
@@ -100,6 +106,15 @@ function Registro({ onLogin }) {
 
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', display: 'flex', minHeight: '100dvh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-body)', fontFamily: 'var(--font-main)' }}>
+      <style>{`
+          .react-datepicker-wrapper { width: 100%; display: block; }
+          .react-datepicker__input-container { display: block; width: 100%; }
+          .react-datepicker { font-family: var(--font-main); border: 1px solid var(--border-color); }
+          .react-datepicker__header { background-color: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+          .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: var(--accent-green) !important; color: white !important; }
+          .reg-input-date { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-main); box-sizing: border-box; font-family: var(--font-main); font-size: 0.9rem; transition: border-color 0.2s; }
+          .reg-input-date:focus { outline: none; border-color: var(--accent-green); }
+      `}</style>
       <div style={{ width: '100%', maxWidth: '420px', padding: '40px', backgroundColor: 'var(--bg-card)', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', margin: '20px', boxSizing: 'border-box' }}>
           
           {/* Título de la aplicación */}
@@ -119,7 +134,23 @@ function Registro({ onLogin }) {
                   <form onSubmit={manejarRegistroOauthCompletado} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
                           <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Cumpleaños:</label>
-                          <input type="date" required value={authFechaNac} onChange={(e) => setAuthFechaNac(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                          <DatePicker
+                              selected={authFechaNac ? new Date(`${authFechaNac}T00:00:00`) : null}
+                              onChange={(date) => {
+                                  if (date) {
+                                      const dia = String(date.getDate()).padStart(2, '0');
+                                      const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                      setAuthFechaNac(`${date.getFullYear()}-${mes}-${dia}`);
+                                  } else {
+                                      setAuthFechaNac('');
+                                  }
+                              }}
+                              dateFormat="dd/MM/yyyy"
+                              locale="es"
+                              placeholderText="Día/Mes/Año"
+                              className="reg-input-date"
+                              required
+                          />
                       </div>
                       <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Finalizar Registro</button>
                   </form>
@@ -143,7 +174,23 @@ function Registro({ onLogin }) {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
                           <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Cumpleaños:</label>
-                          <input type="date" required value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
+                          <DatePicker
+                              selected={fechaNacimiento ? new Date(`${fechaNacimiento}T00:00:00`) : null}
+                              onChange={(date) => {
+                                  if (date) {
+                                      const dia = String(date.getDate()).padStart(2, '0');
+                                      const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                      setFechaNacimiento(`${date.getFullYear()}-${mes}-${dia}`);
+                                  } else {
+                                      setFechaNacimiento('');
+                                  }
+                              }}
+                              dateFormat="dd/MM/yyyy"
+                              locale="es"
+                              placeholderText="Día/Mes/Año"
+                              className="reg-input-date"
+                              required
+                          />
                       </div>
                       <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Crear Cuenta</button>
                   </form>

@@ -8,6 +8,11 @@ estos campos de forma automática.
 ***********************************************************************************/
 
 import React from 'react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import es from 'date-fns/locale/es';
+
+registerLocale('es', es);
 
 function TaskForm({
     esEdicion,
@@ -27,15 +32,12 @@ function TaskForm({
 }) {
     return (
         <form onSubmit={manejarEnvio} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
-            {/* Estilos de diseño integrados para que el formulario se adapte bien a ordenadores y móviles */}
             <style>{`
                 .tf-row { display: flex; gap: 12px; align-items: flex-start; }
-                .tf-col-40 { flex: 0 0 38%; } /* La fecha es un poco más estrecha */
-                .tf-col-60 { flex: 1; }       /* Las alertas ocupan el espacio restante */
+                .tf-col-40 { flex: 0 0 38%; } 
+                .tf-col-60 { flex: 1; }       
                 .tf-col-50 { flex: 1; }
                 
-                /* Diseño de los campos de texto para que sean fáciles de pulsar en pantallas táctiles */
                 .tf-input {
                     width: 100%; padding: 12px; border-radius: 8px;
                     border: 1px solid var(--border-color);
@@ -45,7 +47,12 @@ function TaskForm({
                 }
                 .tf-input:focus { outline: none; border-color: var(--accent-green); }
 
-                /* En teléfonos móviles, colocamos un campo debajo del otro para que nada se vea apretado */
+                .react-datepicker-wrapper { width: 100%; display: block; }
+                .react-datepicker__input-container { display: block; width: 100%; }
+                .react-datepicker { font-family: var(--font-main); border: 1px solid var(--border-color); }
+                .react-datepicker__header { background-color: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+                .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: var(--accent-green) !important; color: white !important; }
+
                 @media (max-width: 768px) {
                     .tf-row { flex-direction: column; gap: 16px; }
                     .tf-col-40, .tf-col-60, .tf-col-50 { width: 100%; flex: none; }
@@ -53,7 +60,6 @@ function TaskForm({
                 }
             `}</style>
 
-            {/* PRIMERA PARTE: Título de la tarea y el botón del asistente de voz */}
             <div className="tf-row">
                 <input 
                     type="text" 
@@ -80,7 +86,6 @@ function TaskForm({
                         transition: 'all 0.3s', fontWeight: '600', flex: 'none'
                     }}
                 >
-                    {/* Cambiamos el icono y el texto del botón dependiendo de lo que esté haciendo la IA */}
                     {escuchando ? (
                         <>
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -110,7 +115,6 @@ function TaskForm({
                 </button>
             </div>
             
-            {/* SEGUNDA PARTE: Descripción opcional */}
             <input 
                 type="text" 
                 placeholder="Descripción (opcional)" 
@@ -119,7 +123,6 @@ function TaskForm({
                 className="tf-input"
             />
             
-            {/* TERCERA PARTE: Elegir si es una tarea personal o de la empresa, y a quién se le asigna */}
             <div className="tf-row">
                 <div className="tf-col-50">
                     <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -138,7 +141,6 @@ function TaskForm({
                     </select>
                 </div>
                 
-                {/* La lista de trabajadores a los que asignar la tarea solo sale si hemos elegido un grupo de empresa */}
                 {tareaGrupoId && !esEdicion && (
                     <div className="tf-col-50">
                         <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -159,28 +161,56 @@ function TaskForm({
                 )}
             </div>
 
-            {/* CUARTA PARTE: Fechas, horas y programación de alertas para que el sistema nos avise */}
             <div className="tf-row">
                 <div className="tf-col-40">
                     <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Fecha límite
                     </label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <input 
-                            type="date" 
-                            required 
-                            value={fecha} 
-                            onChange={(e) => setFecha(e.target.value)} 
-                            className="tf-input"
-                            style={{ flex: '1.5', padding: '12px 8px' }} 
-                        />
-                        <input 
-                            type="time" 
-                            value={hora} 
-                            onChange={(e) => setHora(e.target.value)} 
-                            className="tf-input"
-                            style={{ flex: '1', padding: '12px 8px' }} 
-                        />
+                        <div style={{ flex: '1.5' }}>
+                            <DatePicker
+                                selected={fecha ? new Date(`${fecha}T00:00:00`) : null}
+                                onChange={(date) => {
+                                    if (date) {
+                                        const dia = String(date.getDate()).padStart(2, '0');
+                                        const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                        setFecha(`${date.getFullYear()}-${mes}-${dia}`);
+                                    } else {
+                                        setFecha('');
+                                    }
+                                }}
+                                dateFormat="dd/MM/yyyy"
+                                locale="es"
+                                placeholderText="Día/Mes/Año"
+                                className="tf-input"
+                                style={{ padding: '12px 8px' }}
+                                required
+                            />
+                        </div>
+
+                        <div style={{ flex: '1' }}>
+                            <DatePicker
+                                selected={hora ? new Date(`1970-01-01T${hora}:00`) : null}
+                                onChange={(time) => {
+                                    if (time) {
+                                        const h = String(time.getHours()).padStart(2, '0');
+                                        const m = String(time.getMinutes()).padStart(2, '0');
+                                        setHora(`${h}:${m}`);
+                                    } else {
+                                        setHora('');
+                                    }
+                                }}
+                                showTimeSelect
+                                showTimeSelectOnly
+                                timeIntervals={15}
+                                timeCaption="Hora"
+                                dateFormat="HH:mm"
+                                locale="es"
+                                placeholderText="HH:MM"
+                                className="tf-input"
+                                style={{ padding: '12px 8px' }}
+                            />
+                        </div>
                     </div>
                 </div>
                 
@@ -199,21 +229,37 @@ function TaskForm({
                         <option value="semana">Notificar la próxima semana</option>
                         <option value="personalizado">Configuración manual...</option>
                     </select>
-                    {/* Si elegimos configuración manual, mostramos el selector exacto de fecha y hora */}
+                    
                     {opcionAviso === 'personalizado' && (
-                        <input 
-                            type="datetime-local" 
-                            value={fechaNotificacion} 
-                            onChange={(e) => setFechaNotificacion(e.target.value)} 
-                            required 
-                            className="tf-input"
-                            style={{ marginTop: '8px' }} 
-                        />
+                        <div style={{ marginTop: '8px' }}>
+                            <DatePicker
+                                selected={fechaNotificacion ? new Date(fechaNotificacion) : null}
+                                onChange={(date) => {
+                                    if (date) {
+                                        const dia = String(date.getDate()).padStart(2, '0');
+                                        const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                        const anio = date.getFullYear();
+                                        const h = String(date.getHours()).padStart(2, '0');
+                                        const m = String(date.getMinutes()).padStart(2, '0');
+                                        setFechaNotificacion(`${anio}-${mes}-${dia}T${h}:${m}`);
+                                    } else {
+                                        setFechaNotificacion('');
+                                    }
+                                }}
+                                showTimeSelect
+                                timeIntervals={15}
+                                timeCaption="Hora"
+                                dateFormat="dd/MM/yyyy - HH:mm"
+                                locale="es"
+                                placeholderText="Selecciona el día y la hora de la alerta"
+                                className="tf-input"
+                                required
+                            />
+                        </div>
                     )}
                 </div>
             </div>
             
-            {/* QUINTA PARTE: Si es una tarea que hay que repetir cada cierto tiempo (diaria, semanal...) */}
             <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Repetición automática
@@ -232,7 +278,6 @@ function TaskForm({
                         <option value="anual">Repetir cada año</option>
                         <option value="personalizado">Repetir cada varios días...</option>
                     </select>
-                    {/* Si elegimos días personalizados, enseñamos una cajita para escribir el número exacto */}
                     {repeticion === 'personalizado' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <span style={{fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500'}}>Cada:</span>
@@ -252,7 +297,6 @@ function TaskForm({
                 </div>
             </div>
             
-            {/* SEXTA PARTE: Botones finales para guardar la tarea o cancelar */}
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button type="submit" className="btn-add" style={{ flex: 1, padding: '14px', fontSize: '1rem', fontWeight: '600', borderRadius: '8px' }}>
                     {esEdicion ? 'Guardar Cambios' : 'Crear Tarea'}

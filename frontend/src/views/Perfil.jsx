@@ -10,6 +10,12 @@ import Sidebar from '../components/layout/Sidebar';
 import { useTareas } from '../hooks/useTareas';
 import { useKoraAI } from '../hooks/useKoraAI';
 
+import DatePicker, { registerLocale } from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import es from 'date-fns/locale/es';
+
+registerLocale('es', es);
+
 function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
@@ -99,6 +105,13 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         .native-input:focus { outline: none; border-color: var(--accent-green); }
         .native-btn { width: 100%; height: 48px; border-radius: 12px; background-color: var(--accent-green); color: white; border: none; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .native-btn:hover { background-color: var(--accent-green-hover); }
+
+        .react-datepicker-wrapper { width: 100%; display: block; }
+        .react-datepicker__input-container { display: block; width: 100%; }
+        .react-datepicker { font-family: var(--font-main); border: 1px solid var(--border-color); }
+        .react-datepicker__header { background-color: var(--bg-body); border-bottom: 1px solid var(--border-color); }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: var(--accent-green) !important; color: white !important; }
+
         @media (max-width: 768px) {
           .main-content { overflow-x: hidden !important; width: 100vw !important; padding: 15px !important; box-sizing: border-box !important; }
           .contenedor-perfil { flex-direction: column !important; gap: 15px !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
@@ -215,7 +228,23 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
                       </div>
                       <div style={{ marginBottom: '30px' }}>
                         <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px', fontWeight: '500' }}>Fecha de nacimiento</label>
-                        <input type="date" required value={editFechaNac} onChange={(e) => setEditFechaNac(e.target.value)} className="native-input" />
+                        <DatePicker
+                            selected={editFechaNac ? new Date(`${editFechaNac}T00:00:00`) : null}
+                            onChange={(date) => {
+                                if (date) {
+                                    const dia = String(date.getDate()).padStart(2, '0');
+                                    const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                    setEditFechaNac(`${date.getFullYear()}-${mes}-${dia}`);
+                                } else {
+                                    setEditFechaNac('');
+                                }
+                            }}
+                            dateFormat="dd/MM/yyyy"
+                            locale="es"
+                            placeholderText="Día/Mes/Año"
+                            className="native-input"
+                            required
+                        />
                       </div>
                       <button type="submit" className="native-btn">
                          Guardar Cambios
