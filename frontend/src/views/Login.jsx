@@ -23,6 +23,20 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  // --- NUEVOS ESTADOS PARA EL COLD START ---
+  const [isLoading, setIsLoading] = useState(false);
+  const [mensajeCarga, setMensajeCarga] = useState('');
+  // -----------------------------------------
+
+  // Lista de mensajes que irán rotando para entretener al usuario
+  const mensajesEspera = [
+      "Despertando el servidor seguro de Kora...",
+      "Comprobando protocolos de cifrado...",
+      "Conectando con la base de datos...",
+      "Render está arrancando la instancia, casi listo...",
+      "Preparando tu panel de control..."
+  ];
+
   // Comprobamos si el usuario acaba de volver de la página de GitHub
   useEffect(() => {
     // Buscamos si en el enlace (URL) hay un código secreto de autorización
@@ -57,6 +71,23 @@ function Login({ onLogin }) {
   const manejarLogin = async (e) => {
     e.preventDefault(); // Evitamos que la página se recargue sola
     setError('');
+    
+    // 1. Activamos la pantalla de carga y ponemos el primer mensaje
+    setIsLoading(true);
+    setMensajeCarga(mensajesEspera[0]);
+
+    // 2. Creamos un temporizador que cambie el mensaje cada 8 segundos
+    let indiceMensaje = 0;
+    const temporizadorMensajes = setInterval(() => {
+        indiceMensaje++;
+        if (indiceMensaje < mensajesEspera.length) {
+            setMensajeCarga(mensajesEspera[indiceMensaje]);
+        } else {
+            // Si se acaban los mensajes, se queda en el último
+            setMensajeCarga("Tardando un poco más de lo habitual, por favor espera...");
+        }
+    }, 8000); 
+
     try {
       // Enviamos los datos al servidor
       const respuesta = await fetch(`${API_URL}/api/login`, {
@@ -66,9 +97,18 @@ function Login({ onLogin }) {
       });
       const data = await respuesta.json();
       
-      if (respuesta.ok) onLogin(data);
-      else setError(data.error || 'Error al iniciar sesión');
-    } catch (err) { setError('Error de conexión'); }
+      if (respuesta.ok) {
+        onLogin(data);
+      } else {
+        setError(data.error || 'Error al iniciar sesión');
+      }
+    } catch (err) { 
+        setError('Error de conexión'); 
+    } finally {
+        // Pase lo que pase (éxito o error), apagamos el temporizador y la carga
+        clearInterval(temporizadorMensajes);
+        setIsLoading(false);
+    }
   };
 
   // Función que se activa cuando Google nos confirma que el usuario es quien dice ser
@@ -87,6 +127,17 @@ function Login({ onLogin }) {
 
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', display: 'flex', minHeight: '100dvh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-body)', fontFamily: 'var(--font-main)' }}>
+      
+      {/* Añadimos los estilos para la animación del spinner */}
+      <style>
+          {`
+              @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+              }
+          `}
+      </style>
+
       <div style={{ width: '100%', maxWidth: '420px', padding: '40px', backgroundColor: 'var(--bg-card)', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', margin: '20px', boxSizing: 'border-box' }}>
           
           {/* Título de la aplicación */}
@@ -109,7 +160,29 @@ function Login({ onLogin }) {
                   <label style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '500' }}>Contraseña:</label>
                   <input type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-main)', boxSizing: 'border-box' }} />
               </div>
-              <button type="submit" className="btn-add" style={{ width: '100%', padding: '12px', boxSizing: 'border-box' }}>Entrar</button>
+              
+              {/* Botón de envío adaptado al Cold Start */}
+              <button 
+                  type="submit" 
+                  className="btn-add" 
+                  disabled={isLoading}
+                  style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      boxSizing: 'border-box',
+                      opacity: isLoading ? 0.8 : 1, 
+                      cursor: isLoading ? 'not-allowed' : 'pointer' 
+                  }}
+              >
+                  {isLoading ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                          <div className="spinner-border" style={{ width: '1.2rem', height: '1.2rem', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{mensajeCarga}</span>
+                      </div>
+                  ) : (
+                      "Entrar"
+                  )}
+              </button>
           </form>
 
           {/* Línea separadora */}
