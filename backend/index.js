@@ -15,6 +15,11 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// --- LIBRERIAS EXTRA DE SEGURIDAD ---
+const xss = require('xss');
+const helmet = require('helmet');
+// ------------------------------------
+
 // Importamos nuestros propios módulos de la base de datos y las rutas
 const db = require('./db');
 const authRoutes = require('./routes/auth');
@@ -22,8 +27,27 @@ const gruposRoutes = require('./routes/grupos');
 
 // Iniciamos la aplicación y configuramos los permisos
 const app = express();
+
+// 1. HELMET: Oculta las cabeceras HTTP para no dar pistas a los atacantes sobre la infraestructura
+app.use(helmet());
+
 app.use(cors());
 app.use(express.json()); 
+
+// 2. FILTRO ANTI-XSS (Sanitización)
+// Recorremos los datos que envía el usuario y limpiamos cualquier script malicioso 
+// antes de que toque la base de datos o rompa el frontend.
+const sanitizarEntradas = (req, res, next) => {
+    if (req.body) {
+        for (const key in req.body) {
+            if (typeof req.body[key] === 'string') {
+                req.body[key] = xss(req.body[key]);
+            }
+        }
+    }
+    next();
+};
+app.use(sanitizarEntradas);
 
 // Asignamos las rutas separadas para el Login, Registro y Grupos
 app.use('/api', authRoutes);

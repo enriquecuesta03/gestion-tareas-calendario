@@ -12,6 +12,10 @@ const jwt = require('jsonwebtoken'); // Herramienta para crear llaves de acceso 
 const { OAuth2Client } = require('google-auth-library'); // Herramienta para conectarnos con Google
 const db = require('../db'); 
 
+// --- LIBRERIAS EXTRA DE SEGURIDAD ---
+const rateLimit = require('express-rate-limit');
+// ------------------------------------
+
 const router = express.Router(); 
 // La contraseña maestra del servidor para firmar las llaves de acceso
 const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
@@ -51,9 +55,19 @@ router.post('/registro', async (req, res) => {
     }
 });
 
+// Limitador de peticiones para mitigar ataques de fuerza bruta
+// Restringimos a 5 intentos de acceso fallidos cada 15 minutos por IP
+const limitadorLogin = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos en milisegundos
+    max: 5, // Límite de 5 intentos
+    message: { error: 'Demasiados intentos fallidos. Por seguridad, tu cuenta ha sido bloqueada temporalmente. Inténtalo de nuevo en 15 minutos.' },
+    standardHeaders: true, 
+    legacyHeaders: false,
+});
+
 // --- INICIO DE SESIÓN TRADICIONAL ---
-// Comprueba que el correo exista y que la contraseña coincida con la que tenemos guardada
-router.post('/login', (req, res) => {
+// Aplica el limitador exclusivamente a la ruta de validación de credenciales
+router.post('/login', limitadorLogin, (req, res) => {
     const { email, password } = req.body;
 
     // Buscamos al usuario y le damos un formato limpio a su fecha de nacimiento
