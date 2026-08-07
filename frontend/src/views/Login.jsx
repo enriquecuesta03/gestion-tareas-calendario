@@ -30,7 +30,7 @@ function Login({ onLogin }) {
 
   // Lista de mensajes que irán rotando para entretener al usuario
   const mensajesEspera = [
-      "Despertando el servidor seguro de Kora...",
+      "Despertando el servidor de Kora...",
       "Comprobando protocolos de cifrado...",
       "Conectando con la base de datos...",
       "Render está arrancando la instancia, casi listo...",
