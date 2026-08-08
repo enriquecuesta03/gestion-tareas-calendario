@@ -355,6 +355,47 @@ app.post('/api/briefing', verificarToken, async (req, res) => {
     }
 });
 
+// ==========================================
+// RUTA DE SÍNTESIS DE VOZ (PROXY DE ELEVENLABS)
+// ==========================================
+app.post('/api/tts', verificarToken, async (req, res) => {
+    try {
+        const { texto } = req.body;
+        if (!texto) return res.status(400).json({ error: 'Falta el texto a sintetizar' });
+
+        const voiceId = "jcjw6BGYhh9x3PXYUqlu";
+        const urlEleven = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`;
+
+        const respuestaEleven = await fetch(urlEleven, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': process.env.ELEVENLABS_API_KEY,
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg'
+            },
+            body: JSON.stringify({
+                text: texto,
+                model_id: "eleven_multilingual_v2",
+                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+            })
+        });
+
+        if (!respuestaEleven.ok) {
+            const errorEleven = await respuestaEleven.text();
+            console.error("ERROR DE ELEVENLABS:", errorEleven);
+            return res.status(502).json({ error: 'ElevenLabs rechazó la síntesis de voz' });
+        }
+
+        const audioBuffer = await respuestaEleven.arrayBuffer();
+        res.set('Content-Type', 'audio/mpeg');
+        res.send(Buffer.from(audioBuffer));
+
+    } catch (error) {
+        console.error("Fallo general en la síntesis de voz:", error);
+        res.status(500).json({ error: 'Error interno al generar el audio' });
+    }
+});
+
 
 // ==========================================
 // RUTA DE FESTIVOS EXTERNOS
