@@ -81,32 +81,17 @@ export function useKoraAI({
             const dataTexto = await respuestaTexto.json();
             console.log("Texto recibido:", dataTexto.texto);
 
-            // 2. Llamamos a ElevenLabs desde el navegador
-            const elevenLabsApiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-            if (!elevenLabsApiKey) {
-                toast.error("Falta la API Key de ElevenLabs");
-                throw new Error("API Key no configurada");
-            }
-
-            const voiceId = "jcjw6BGYhh9x3PXYUqlu"; 
-            const respuestaAudio = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+            // 2. Pedimos el audio a nuestro propio backend (que llama a ElevenLabs por nosotros)
+            const respuestaAudio = await fetch(`${API_URL}/api/tts`, {
                 method: 'POST',
-                headers: {
-                    'xi-api-key': elevenLabsApiKey,
-                    'Content-Type': 'application/json',
-                    'Accept': 'audio/mpeg'
-                },
-                body: JSON.stringify({
-                    text: dataTexto.texto,
-                    model_id: "eleven_multilingual_v2", 
-                    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-                })
+                headers: headersConAuth(),
+                body: JSON.stringify({ texto: dataTexto.texto })
             });
 
             if (!respuestaAudio.ok) {
                 const errorEleven = await respuestaAudio.text();
                 console.error("ERROR DE ELEVENLABS:", errorEleven);
-                throw new Error("ElevenLabs rechazó la petición");
+                throw new Error("El servidor no pudo generar el audio");
             }
             
             // 3. Convertimos y reproducimos el MP3 real
