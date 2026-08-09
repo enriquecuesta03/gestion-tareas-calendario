@@ -29,6 +29,9 @@ export function useKoraAI({
     const audioUrlRef = useRef(null);
     const reconocimientoRef = useRef(null);
     const textoDictadoRef = useRef('');
+    // Marca si el usuario sigue queriendo dictar; nos permite distinguir un "stop" que
+    // pulsa el propio usuario de un corte automático del navegador por silencio
+    const quiereEscucharRef = useRef(false);
 
     // Preparamos la llave de seguridad para que el servidor nos deje usar la Inteligencia Artificial
     const headersConAuth = () => ({ 
@@ -47,6 +50,7 @@ export function useKoraAI({
                 URL.revokeObjectURL(audioUrlRef.current);
             }
             if (reconocimientoRef.current) {
+                quiereEscucharRef.current = false;
                 reconocimientoRef.current.stop();
             }
         };
@@ -128,6 +132,7 @@ export function useKoraAI({
     const procesarVoz = () => {
         // Si ya nos estaba escuchando, apagamos el micrófono
         if (escuchando) {
+            quiereEscucharRef.current = false;
             if (reconocimientoRef.current) reconocimientoRef.current.stop();
             return;
         }
@@ -149,6 +154,23 @@ export function useKoraAI({
 
         // Avisamos a la aplicación de que el micrófono ya está encendido
         reconocimiento.onstart = () => setEscuchando(true);
+
+        // Si el navegador corta el reconocimiento por su cuenta (Chrome lo hace tras unos
+        // segundos de silencio, incluso con continuous=true), lo distinguimos de un error real:
+        // si el usuario seguía queriendo dictar, lo reiniciamos solos en vez de dejarlo apagado.
+        reconocimiento.onerror = (event) => {
+            console.error("Error de reconocimiento de voz:", event.error);
+            if (event.error === 'no-speech') return; // se gestiona en onend, no es un fallo real
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                toast.error("Permiso de micrófono denegado. Revisa los permisos del navegador.");
+                quiereEscucharRef.current = false;
+            } else if (event.error === 'audio-capture') {
+                toast.error("No se ha detectado ningún micrófono.");
+                quiereEscucharRef.current = false;
+            } else if (event.error !== 'aborted') {
+                toast.error("Error del micrófono: " + event.error);
+            }
+        };
         
         // Conforme vamos hablando, juntamos todas las palabras en una frase
         reconocimiento.onresult = (event) => {
@@ -161,7 +183,14 @@ export function useKoraAI({
 
         // Cuando dejamos de hablar o apagamos el micrófono, mandamos el texto a la IA
         reconocimiento.onend = async () => {
+            // Si el usuario no ha pedido parar y todavía no hemos capturado nada, es casi
+            // seguro que ha sido el corte automático de Chrome por silencio: reiniciamos solos.
+            if (quiereEscucharRef.current && !textoDictadoRef.current) {
+                try { reconocimiento.start(); return; } catch { /* si falla, seguimos y cerramos abajo */ }
+            }
+
             setEscuchando(false);
+            quiereEscucharRef.current = false;
             const textoFinal = textoDictadoRef.current;
             if (!textoFinal) return; 
             
@@ -206,6 +235,7 @@ export function useKoraAI({
         };
         
         // Encendemos el micrófono
+        quiereEscucharRef.current = true;
         reconocimiento.start();
     };
 
