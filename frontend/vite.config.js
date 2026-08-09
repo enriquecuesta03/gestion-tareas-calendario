@@ -21,7 +21,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       
       // Indicamos los archivos básicos que tiene que guardar
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       
       // Este es el "carnet de identidad" de la aplicación cuando se instala
       manifest: {
