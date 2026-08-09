@@ -171,6 +171,11 @@ app.put('/api/tareas/:id', verificarToken, (req, res) => {
                 return res.json({ mensaje: 'Estado actualizado correctamente' });
             });
         }
+        // Si no viene ni titulo ni estado, no hay nada que actualizar: respondemos con un error
+        // claro en lugar de dejar la petición sin respuesta (colgada hasta el timeout del cliente)
+        else {
+            return res.status(400).json({ error: 'No se ha indicado ningún campo válido para actualizar' });
+        }
     });
 });
 
