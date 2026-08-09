@@ -83,7 +83,14 @@ export function useTareas(token, onLogout) {
                     else if (t.repeticion.startsWith('personalizado_')) nueva.setDate(nueva.getDate() + parseInt(t.repeticion.split('_')[1], 10));
                     return nueva;
                 };
-                fetch(`${API_URL}/api/tareas`, { method: 'POST', headers: headersConAuth(), body: JSON.stringify({ titulo: t.titulo, descripcion: t.descripcion, fecha_vencimiento: obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_vencimiento))), fecha_notificacion: t.fecha_notificacion ? obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_notificacion))) : null, repeticion: t.repeticion, grupo_id: t.grupo_id, asignado_a: t.asignado_a }) });
+                // Esperamos a que esta petición termine ANTES de seguir, para que la
+                // siguiente ocurrencia ya exista en la base de datos cuando llamemos a cargarTareas()
+                try {
+                    await fetch(`${API_URL}/api/tareas`, { method: 'POST', headers: headersConAuth(), body: JSON.stringify({ titulo: t.titulo, descripcion: t.descripcion, fecha_vencimiento: obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_vencimiento))), fecha_notificacion: t.fecha_notificacion ? obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_notificacion))) : null, repeticion: t.repeticion, grupo_id: t.grupo_id, asignado_a: t.asignado_a }) });
+                } catch (error) {
+                    console.error(error);
+                    notificarError("No se pudo crear la siguiente tarea recurrente");
+                }
             }
         }
         try {

@@ -14,9 +14,22 @@ import { Toaster } from 'react-hot-toast';
 import { useTareas } from '../hooks/useTareas';
 import { useKoraAI } from '../hooks/useKoraAI';
 
+// Lee el ID del usuario directamente desde su propio token (sin verificar firma,
+// solo lectura: la verificación real ya la hace el backend en cada petición).
+// Así comparamos "es esta fila mi propia fila" por ID y no por nombre, que puede repetirse.
+function obtenerIdDesdeToken(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.id;
+    } catch {
+        return null;
+    }
+}
+
 function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'https://kora-api-tfg.onrender.com';
+  const idUsuario = obtenerIdDesdeToken(token);
 
   const [menuAbierto, setMenuAbierto] = useState(false); 
 
@@ -250,14 +263,14 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
                                               <div style={{ flex: 1, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                   <span style={{ color: 'var(--text-main)', fontWeight: '600', fontSize: '1rem', display: 'block' }}>
                                                       {miembro.nombre} 
-                                                      {miembro.nombre === nombreUsuario && <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>(Tú)</span>}
+                                                      {miembro.id === idUsuario && <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>(Tú)</span>}
                                                   </span>
                                                   <span style={{ backgroundColor: miembro.rol === 'jefe' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: miembro.rol === 'jefe' ? 'var(--accent-green)' : 'var(--text-muted)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                                       {miembro.rol}
                                                   </span>
                                               </div>
 
-                                              {grupo.rol === 'jefe' && miembro.nombre !== nombreUsuario && (
+                                              {grupo.rol === 'jefe' && miembro.id !== idUsuario && (
                                                   <div className="acciones-miembro-movil" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                       {miembro.rol !== 'jefe' ? (
                                                           <button onClick={() => manejarCambiarRol(grupo.id, miembro.id, miembro.nombre, 'jefe')} className="btn-accion-rol btn-ascender">
