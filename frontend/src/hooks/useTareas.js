@@ -69,6 +69,13 @@ export function useTareas(token, onLogout) {
     };
 
     const cambiarEstado = async (id, nuevoEstado, obtenerFechaHoraLocalStr) => {
+        // Formatea un objeto Date usando sus componentes LOCALES (no UTC), para no desplazar
+        // la hora según la zona horaria del navegador. .toISOString() convierte a UTC y por
+        // eso desplazaba la hora (2h en verano, 1h en invierno, en la España peninsular).
+        const aFechaLocalStr = (date) => {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        };
         // LÓGICA DE REPETICIÓN: Si completamos la tarea y estaba configurada para repetirse, 
         // calculamos la fecha de la próxima vez y creamos una tarea nueva idéntica.
         if (nuevoEstado === 'Completado') {
@@ -86,7 +93,7 @@ export function useTareas(token, onLogout) {
                 // Esperamos a que esta petición termine ANTES de seguir, para que la
                 // siguiente ocurrencia ya exista en la base de datos cuando llamemos a cargarTareas()
                 try {
-                    await fetch(`${API_URL}/api/tareas`, { method: 'POST', headers: headersConAuth(), body: JSON.stringify({ titulo: t.titulo, descripcion: t.descripcion, fecha_vencimiento: obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_vencimiento)).toISOString()), fecha_notificacion: t.fecha_notificacion ? obtenerFechaHoraLocalStr(calcularSiguiente(new Date(t.fecha_notificacion)).toISOString()) : null, repeticion: t.repeticion, grupo_id: t.grupo_id, asignado_a: t.asignado_a }) });
+                    await fetch(`${API_URL}/api/tareas`, { method: 'POST', headers: headersConAuth(), body: JSON.stringify({ titulo: t.titulo, descripcion: t.descripcion, fecha_vencimiento: obtenerFechaHoraLocalStr(aFechaLocalStr(calcularSiguiente(new Date(t.fecha_vencimiento)))), fecha_notificacion: t.fecha_notificacion ? obtenerFechaHoraLocalStr(aFechaLocalStr(calcularSiguiente(new Date(t.fecha_notificacion)))) : null, repeticion: t.repeticion, grupo_id: t.grupo_id, asignado_a: t.asignado_a }) });
                 } catch (error) {
                     console.error(error);
                     notificarError("No se pudo crear la siguiente tarea recurrente");
