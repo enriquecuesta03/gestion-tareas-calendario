@@ -128,6 +128,11 @@ router.delete('/:grupoId/miembros/:miembroId', verificarToken, (req, res) => {
     const { grupoId, miembroId } = req.params;
     const usuarioId = req.user.id;
 
+    // Un jefe no puede expulsarse a sí mismo (para eso ya existe "salir del equipo")
+    if (Number(miembroId) === usuarioId) {
+        return res.status(400).json({ error: 'No puedes expulsarte a ti mismo. Usa la opción de salir del equipo.' });
+    }
+
     db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
         if (err || results.length === 0 || results[0].rol !== 'jefe') {
             return res.status(403).json({ error: 'Solo un jefe puede expulsar miembros' });
@@ -145,6 +150,16 @@ router.put('/:grupoId/miembros/:miembroId/rol', verificarToken, (req, res) => {
     const { grupoId, miembroId } = req.params;
     const { rol } = req.body;
     const usuarioId = req.user.id;
+
+    // El rol solo puede ser uno de estos dos valores; cualquier otra cosa se rechaza
+    if (rol !== 'jefe' && rol !== 'empleado') {
+        return res.status(400).json({ error: 'Rol no válido. Debe ser "jefe" o "empleado".' });
+    }
+
+    // Un jefe no puede cambiar su propio rol (evita que un equipo se quede sin ningún jefe)
+    if (Number(miembroId) === usuarioId) {
+        return res.status(400).json({ error: 'No puedes cambiar tu propio rol.' });
+    }
 
     db.query('SELECT rol FROM grupo_usuarios WHERE grupo_id = ? AND usuario_id = ?', [grupoId, usuarioId], (err, results) => {
         if (err || results.length === 0 || results[0].rol !== 'jefe') {
