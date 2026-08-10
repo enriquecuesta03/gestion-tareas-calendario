@@ -28,6 +28,7 @@ export default defineConfig({
         name: 'Kora Task Manager',
         short_name: 'Kora',
         description: 'Gestor inteligente de tareas y equipos',
+        lang: 'es',
         theme_color: '#1e293b', // Color de la barra superior del móvil
         background_color: '#0f172a', // Color de fondo mientras carga
         display: 'standalone', // Hace que se abra a pantalla completa, sin la barra del navegador
