@@ -17,17 +17,31 @@ const rateLimit = require('express-rate-limit');
 // ------------------------------------
 
 const router = express.Router(); 
-// La contraseña maestra del servidor para firmar las llaves de acceso
-const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
+// La contraseña maestra del servidor para firmar las llaves de acceso.
+// Sin esta variable de entorno, la aplicación no arranca: es preferible un
+// fallo claro al arrancar a que corra con un secreto visible en el código.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FALTA LA VARIABLE DE ENTORNO JWT_SECRET. La aplicación no puede arrancar sin ella.');
+    process.exit(1);
+}
 
 // Identificador público de nuestra aplicación en los servidores de Google
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '374057828390-89sst7497o9mu099of83n5oluabu5rvp.apps.googleusercontent.com'; 
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+if (!GOOGLE_CLIENT_ID) {
+    console.error('FALTA LA VARIABLE DE ENTORNO GOOGLE_CLIENT_ID. La aplicación no puede arrancar sin ella.');
+    process.exit(1);
+}
 
 // ===================================================================
 // Identificadores para conectarnos con los servidores de GitHub
 // ===================================================================
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || 'Ov23liHuJKItfZMT9Qks';
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '12a2c323743e5c3e2649fab305b6f369de1ae0e9';
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
+    console.error('FALTAN LAS VARIABLES DE ENTORNO GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET. La aplicación no puede arrancar sin ellas.');
+    process.exit(1);
+}
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 

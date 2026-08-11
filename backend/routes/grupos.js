@@ -11,8 +11,13 @@ const jwt = require('jsonwebtoken');
 const db = require('../db'); 
 
 const router = express.Router();
-// Contraseña secreta para comprobar las sesiones de los usuarios
-const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
+// Contraseña secreta para comprobar las sesiones de los usuarios.
+// Sin esta variable de entorno, la aplicación no arranca.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FALTA LA VARIABLE DE ENTORNO JWT_SECRET. La aplicación no puede arrancar sin ella.');
+    process.exit(1);
+}
 
 // Función de seguridad: Comprueba si el usuario tiene la sesión iniciada antes de dejarle pasar
 const verificarToken = (req, res, next) => {

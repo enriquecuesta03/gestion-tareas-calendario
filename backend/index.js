@@ -53,11 +53,21 @@ app.use(sanitizarEntradas);
 app.use('/api', authRoutes);
 app.use('/api/grupos', gruposRoutes);
 
-// Contraseña secreta para comprobar las sesiones de los usuarios
-const JWT_SECRET = process.env.JWT_SECRET || 'mi_secreto_super_seguro_para_el_tfg';
+// Contraseña secreta para comprobar las sesiones de los usuarios.
+// Si no está definida en las variables de entorno, la aplicación no arranca:
+// es preferible un fallo claro al arrancar a que corra con un secreto público.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FALTA LA VARIABLE DE ENTORNO JWT_SECRET. La aplicación no puede arrancar sin ella.');
+    process.exit(1);
+}
 
 // Inicializamos la IA de Google Gemini usando la variable de entorno
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AQ.Ab8RN6IVqrTFV7rcSUIS4RhZqMdySH66HV6BZsFcLmjWu1ZXnA");
+if (!process.env.GEMINI_API_KEY) {
+    console.error('FALTA LA VARIABLE DE ENTORNO GEMINI_API_KEY. La aplicación no puede arrancar sin ella.');
+    process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Función de seguridad para comprobar que el usuario tiene un token válido
 const verificarToken = (req, res, next) => {
