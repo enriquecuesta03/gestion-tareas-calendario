@@ -57,6 +57,9 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   const [columnaDestino, setColumnaDestino] = useState(null);
 
   // LÓGICA DE TIEMPO REAL: Un reloj oculto que avanza para revisar las notificaciones cada 15 segundos
+  // (sin esto, "notificacionesPendientes" de más abajo solo se recalcularía cuando
+  // cambiara algo más en el estado; con esto, cada 15s se fuerza un re-render y
+  // se comprueba si alguna tarea acaba de cruzar su fecha de aviso)
   const [relojInterno, setRelojInterno] = useState(Date.now());
 
   useEffect(() => {
@@ -95,6 +98,10 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   
   const manejarEnvioFormulario = async (e) => {
     e.preventDefault();
+    // "personalizado" no se guarda tal cual: se codifica en un solo string
+    // (personalizado_7, personalizado_15...) porque la columna repeticion de
+    // la BD es un simple varchar, no dos columnas separadas. Al editar una
+    // tarea (más abajo, en manejarEdicionTarea) se hace el proceso inverso.
     const repeticionFinal = repeticion === 'personalizado' ? `personalizado_${diasPersonalizados}` : repeticion;
     
     const fechaVencimientoFinal = fecha ? `${fecha}T${hora || '00:00'}` : null;
@@ -117,6 +124,10 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   };
 
   const manejarEdicionTarea = (tarea) => {
+    // aquí se deshace justo lo que se hizo al guardar: si el string de
+    // repeticion empieza por "personalizado_", separamos el número de días
+    // para que el desplegable y el input numérico del formulario se rellenen
+    // cada uno con lo suyo, en vez de mostrar el string completo sin sentido
     setTareaEnEdicion(tarea.id); setTitulo(tarea.titulo); setDescripcion(tarea.descripcion || ''); setTareaGrupoId(tarea.grupo_id || '');
     if (tarea.fecha_vencimiento) { const localStr = obtenerFechaHoraLocalStr(tarea.fecha_vencimiento); const [f, h] = localStr.split('T'); setFecha(f); setHora(h === '00:00' ? '' : h); }
     if (tarea.fecha_notificacion) { setFechaNotificacion(obtenerFechaHoraLocalStr(tarea.fecha_notificacion)); setOpcionAviso('personalizado'); }
@@ -165,12 +176,18 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
     if (tarea.fecha_vencimiento) {
       const fStr = obtenerFechaHoraLocalStr(tarea.fecha_vencimiento);
       let colorFondo = tarea.estado === 'Completado' ? 'var(--text-muted)' : (tarea.estado === 'En Progreso' ? '#3b82f6' : 'var(--accent-green)');
+      // las tareas de equipo (no completadas) se pintan siempre en este gris
+      // oscuro, pisando el color de estado normal, para distinguirlas de un
+      // vistazo de las personales sin tener que abrir cada una
       if (tarea.grupo_id && tarea.estado !== 'Completado') colorFondo = '#0f172a';
       eventosCalendario.push({ id: `tarea-${tarea.id}-base`, title: tarea.titulo, start: fStr, allDay: fStr.endsWith('T00:00'), backgroundColor: colorFondo, borderColor: colorFondo, cursor: 'pointer' });
     }
   });
 
   const eventosCumpleanos = [];
+  // pinto el cumpleaños del año pasado, este año y los dos siguientes (-1 a +3)
+  // para que aparezca aunque el usuario navegue el calendario hacia atrás o
+  // varios años hacia delante, no solo el de "este año" literal
   if (fechaNacUsuario) { const partes = fechaNacUsuario.split('-'); if (partes.length === 3) { for (let i = -1; i <= 3; i++) eventosCumpleanos.push({ id: `cumple-${new Date().getFullYear() + i}`, title: 'Día Libre (Cumpleaños)', date: `${new Date().getFullYear() + i}-${partes[1]}-${partes[2]}`, allDay: true, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }); } }
 
   const vacacionesFiltradas = vacaciones.filter(v => {
@@ -184,6 +201,9 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   });
 
   const eventosVacaciones = vacacionesFiltradas.map(v => {
+      // FullCalendar trata el "end" de un evento de varios días como exclusivo
+      // (el día que se guarde en end NO se pinta), así que hay que sumarle
+      // uno para que el último día de vacaciones se vea también sombreado
       const dFin = new Date(v.fecha_fin); dFin.setDate(dFin.getDate() + 1); 
       return { id: `vacacion-${v.id}`, title: `Ausencia: ${v.usuario_nombre}`, start: `${new Date(v.fecha_inicio).getFullYear()}-${String(new Date(v.fecha_inicio).getMonth() + 1).padStart(2, '0')}-${String(new Date(v.fecha_inicio).getDate()).padStart(2, '0')}`, end: `${dFin.getFullYear()}-${String(dFin.getMonth() + 1).padStart(2, '0')}-${String(dFin.getDate()).padStart(2, '0')}`, allDay: true, backgroundColor: '#f59e0b', borderColor: '#f59e0b', extendedProps: { usuario_nombre: v.usuario_nombre, grupo_nombre: v.grupo_nombre, id_real: v.id }};
   });
@@ -192,6 +212,9 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
   
   const todosLosEventos = [...eventosCalendario, ...eventosVacaciones, ...eventosCumpleanos, ...eventosFestivosFormateados];
 
+  // el filtro de '-proy-' descarta las ocurrencias futuras "fantasma" que
+  // useTareas genera para pintar tareas recurrentes en el calendario; en el
+  // backlog solo interesa la tarea real, no sus proyecciones
   const backlogOrdenado = [...tareasFiltradas.filter(t => !t.id.toString().includes('-proy-'))].filter(t => t.estado !== 'Completado').sort((a, b) => {
         if (!a.fecha_vencimiento) return 1; if (!b.fecha_vencimiento) return -1; return new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento);
   });
@@ -231,6 +254,11 @@ function DashboardLayout({ token, nombreUsuario, onLogout, temaOscuro, setTemaOs
           </div>
           
           <div style={{ flex: '2', minWidth: '0', width: '100%' }}>
+            {/* el Outlet es de react-router: aquí se pinta la página hija que
+                toque según la URL (tablero, métricas, equipos...), y el
+                "context" es cómo le llega todo lo que ya se calculó aquí
+                arriba sin tener que volver a pedirlo. Cada página hija lo lee
+                con useOutletContext() en vez de recibirlo como props normales */}
             <Outlet context={{
                 tareasPorHacer, tareasEnProgreso, tareasCompletadas, columnaDestino, setColumnaDestino,
                 manejarDrop: manejarDropKanban, cambiarEstado, editarTarea: manejarEdicionTarea, borrarTarea: (id) => borrarTarea(id, setTareaEnVista), setTareaEnVista, cargarComentarios,

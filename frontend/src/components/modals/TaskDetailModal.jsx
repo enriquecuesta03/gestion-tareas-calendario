@@ -76,10 +76,17 @@ function TaskDetailModal({
                                                 <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{c.autor}</span>
                                                 
                                                 {/* Si el comentario es nuestro, nos da la opción de editarlo para corregir errores */}
+                                                {/* Ojo: esto compara por nombre de usuario, no por id. Funciona
+                                                    bien mientras no haya dos personas con el mismo nombre
+                                                    exacto en el mismo equipo; no es el caso ahora mismo, pero
+                                                    sería más robusto comparar por id si se pudiera revisar */}
                                                 {c.autor === nombreUsuario && comentarioEnEdicionId !== c.id && (
                                                     <button onClick={() => iniciarEdicionComentario(c)} style={{ background: 'none', border: 'none', color: 'var(--accent-green)', fontSize: '0.75rem', cursor: 'pointer', marginLeft: '10px', padding: 0, fontWeight: '600' }}>Editar</button>
                                                 )}
                                             </div>
+                                            {/* aquí no fijo locale ni formato como en la fecha de vencimiento
+                                                de arriba; usa el idioma que tenga configurado el navegador.
+                                                En español sale bien igualmente, así que lo dejé así */}
                                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(c.fecha_creacion).toLocaleString()}</span>
                                         </div>
                                         

@@ -37,6 +37,9 @@ function TaskForm({
                 .tf-col-40 { flex: 0 0 38%; } 
                 .tf-col-60 { flex: 1; }       
                 .tf-col-50 { flex: 1; }
+                /* tf-col-60 y tf-col-50 son lo mismo en la práctica (flex:1 los dos),
+                   nombres de cuando pensé en darles anchos distintos. Los dejo así,
+                   cambiar el nombre ahora tocaría media docena de sitios para nada. */
                 
                 .tf-input {
                     width: 100%; padding: 12px; border-radius: 8px;
@@ -76,6 +79,10 @@ function TaskForm({
                     onClick={procesarVoz}
                     disabled={analizandoVoz}
                     className="tf-btn-mic"
+                    // el botón tiene tres pintas distintas según el estado: escuchando
+                    // (rojo, grabando), analizandoVoz (verde, esperando a Gemini) o el
+                    // reposo normal. Todo lo de abajo (color, texto, icono) sale de
+                    // esos mismos dos booleanos, no hay un tercer estado explícito
                     style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '12px 18px', borderRadius: '8px',
@@ -132,6 +139,9 @@ function TaskForm({
                         value={tareaGrupoId} 
                         onChange={(e) => setTareaGrupoId(e.target.value)} 
                         disabled={esEdicion} 
+                    // no dejo tocar el grupo al editar una tarea ya creada: cambiar
+                    // de espacio implicaría recargar miembrosDelGrupo y reasignar,
+                    // y no vale la pena para lo poco que se usaría
                         className="tf-input"
                     >
                         <option value="">Personal</option>
@@ -168,6 +178,10 @@ function TaskForm({
                     </label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: '1.5' }}>
+                            {/* ojo con el T00:00:00 de aquí abajo: si se lo dejo a Date sin
+                                hora, lo interpreta como medianoche UTC y según la zona
+                                horaria del navegador la fecha se corre un día. Me tuvo
+                                un buen rato liado hasta que caí en esto. */}
                             <DatePicker
                                 selected={fecha ? new Date(`${fecha}T00:00:00`) : null}
                                 onChange={(date) => {
@@ -189,6 +203,9 @@ function TaskForm({
                         </div>
 
                         <div style={{ flex: '1' }}>
+                            {/* DatePicker no tiene un modo "solo hora" real, así que le
+                                paso una fecha cualquiera (1970-01-01) y solo me quedo con
+                                horas y minutos al guardar. Un poco chapuza pero funciona. */}
                             <DatePicker
                                 selected={hora ? new Date(`1970-01-01T${hora}:00`) : null}
                                 onChange={(time) => {
@@ -223,6 +240,8 @@ function TaskForm({
                         onChange={manejarCambioAviso} 
                         className="tf-input"
                     >
+                        {/* hoy/mañana/semana cubren casi todos los casos reales;
+                            "personalizado" está para lo raro, con su propio DatePicker debajo */}
                         <option value="">Sin alerta programada</option>
                         <option value="hoy">Notificar hoy en 2 horas</option>
                         <option value="manana">Notificar mañana (09:00 AM)</option>
@@ -279,6 +298,9 @@ function TaskForm({
                         <option value="personalizado">Repetir cada varios días...</option>
                     </select>
                     {repeticion === 'personalizado' && (
+                        // "cada N días" es aparte de diaria/semanal/mensual/anual porque
+                        // esas cuatro se guardan como una palabra fija en la BD, mientras
+                        // que esta necesita también el número que escriba el usuario
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
                             <span style={{fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500'}}>Cada:</span>
                             <input 

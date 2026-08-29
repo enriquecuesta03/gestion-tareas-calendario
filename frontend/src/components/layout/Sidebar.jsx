@@ -90,6 +90,8 @@ function Sidebar({
     // =======================================================
 
     // Función para saber en qué pantalla estamos y poder marcar el botón correspondiente
+    // uso includes() y no === a propósito: así /dashboard/tablero/algo también
+    // marca el botón de "Tablero Operativo" como activo, no solo la ruta exacta
     const isActive = (path) => location.pathname.includes(path);
 
     return (
@@ -228,7 +230,11 @@ function Sidebar({
                             </button>
                         </div>
 
-                        {/* Botón para ver las notificaciones de tareas pendientes */}
+                        {/* Botón para ver las notificaciones de tareas pendientes.
+                            Esto es aparte del aviso nativo del sistema operativo de más
+                            arriba: aquella salta una vez por tarea y desaparece, esto es
+                            una lista siempre disponible con las mismas tareas pendientes
+                            mientras no se completen */}
                         <div style={{ marginTop: '10px' }}>
                             <button 
                                 onClick={() => setMostrarNotificaciones(!mostrarNotificaciones)} 

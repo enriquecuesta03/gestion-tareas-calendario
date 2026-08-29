@@ -54,6 +54,9 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
   });
 
   const cargarMisGrupos = () => {
+    // primero pido la lista de equipos, y por cada uno lanzo otra petición para
+    // sus miembros; con pocos equipos por usuario no compensa complicar esto
+    // con un endpoint que lo devuelva todo junto
     fetch(`${API_URL}/api/grupos`, { headers: headersConAuth() })
     .then(res => res.json())
     .then(data => {
@@ -145,6 +148,9 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
 
   const manejarCrearVacacion = (e) => {
       e.preventDefault();
+      // las fechas vienen del input type="date" en formato YYYY-MM-DD, así que
+      // comparar como strings ya da el orden cronológico correcto sin tener
+      // que pasar por new Date() para esto
       if (vacacionFin < vacacionInicio) return notificarError('La fecha de fin no puede ser anterior a la de inicio');
       fetch(`${API_URL}/api/vacaciones`, {
           method: 'POST', headers: headersConAuth(), body: JSON.stringify({ grupo_id: vacacionGrupoId, fecha_inicio: vacacionInicio, fecha_fin: vacacionFin })
@@ -263,6 +269,9 @@ function DirectorioEmpresas({ token, nombreUsuario, onLogout, temaOscuro, setTem
                                               <div style={{ flex: 1, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                   <span style={{ color: 'var(--text-main)', fontWeight: '600', fontSize: '1rem', display: 'block' }}>
                                                       {miembro.nombre} 
+                                                      {/* comparación por id, no por nombre (ver obtenerIdDesdeToken
+                                                          al principio del archivo) para que el "(Tú)" salga en la
+                                                          fila correcta aunque hubiera dos miembros con el mismo nombre */}
                                                       {miembro.id === idUsuario && <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>(Tú)</span>}
                                                   </span>
                                                   <span style={{ backgroundColor: miembro.rol === 'jefe' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: miembro.rol === 'jefe' ? 'var(--accent-green)' : 'var(--text-muted)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>

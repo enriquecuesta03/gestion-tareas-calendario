@@ -39,9 +39,14 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
   const { tareas, misGrupos } = useTareas(token, onLogout);
   
   const { hablando, procesando, reproducirResumen } = useKoraAI({
+      // este hook está pensado para el dashboard (donde sí hay un formulario de
+      // tarea abierto); aquí en Perfil no hace falta esa parte, así que le paso
+      // un objeto vacío solo para que no se rompa por falta del parámetro
       token, nombreUsuario, tareas, formulariosActions: { estadoActual: {} } 
   });
 
+  // mismo filtro de "pendiente de notificar" que se usa en el resto de la app:
+  // si ya está completada, no cuenta como pendiente aunque su fecha haya pasado
   const notificacionesPendientes = tareas.filter(tarea => {
       if (tarea.estado === 'Completado' || !tarea.fecha_notificacion) return false;
       return Date.now() >= new Date(tarea.fecha_notificacion).getTime();
@@ -68,6 +73,9 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
         localStorage.setItem('token', body.token); 
         localStorage.setItem('nombreUsuario', body.nombre);
         localStorage.setItem('fechaNacUsuario', body.fecha_nacimiento);
+        // recargo la página entera en vez de actualizar el estado a mano: el
+        // nombre de usuario se usa en un montón de sitios (sidebar, saludo del
+        // resumen de voz...) y es más simple refrescar todo que ir propagándolo
         setTimeout(() => window.location.reload(), 1500);
       } else { setMensaje({ texto: body.error, tipo: 'error' }); }
     });
@@ -117,6 +125,8 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
           .contenedor-perfil { flex-direction: column !important; gap: 15px !important; width: 100% !important; margin: 0 !important; box-sizing: border-box !important; }
           .menu-perfil-movil { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; padding-bottom: 10px !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none; width: 100% !important; margin: 0 !important; gap: 10px !important; box-sizing: border-box !important; }
           .menu-perfil-movil::-webkit-scrollbar { display: none; }
+          /* truquito para que la última pestaña del menú móvil no quede pegada
+             al borde derecho cuando se desliza hasta el final */
           .menu-perfil-movil::after { content: ''; flex: 0 0 5px; }
           .perfil-tab-btn { flex: 0 0 auto !important; white-space: nowrap !important; text-align: center !important; border-radius: 24px !important; padding: 10px 20px !important; background-color: var(--bg-card) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; }
           .perfil-tab-btn.active { background-color: var(--text-main) !important; color: var(--bg-card) !important; border-color: var(--text-main) !important; }
@@ -185,6 +195,9 @@ function Perfil({ token, nombreUsuario, onLogout, temaOscuro, setTemaOscuro }) {
 
             </div>
 
+            {/* el key={vistaActiva} es aposta: al cambiar de pestaña React destruye
+                y vuelve a montar este div entero, lo que reinicia la animación
+                fade-in de la clase de arriba. Sin el key no se notaría el cambio */}
             <div className="panel-contenido-perfil fade-in-section" key={vistaActiva} style={{ flex: '3', minWidth: '0', width: '100%', backgroundColor: 'var(--bg-card)', padding: '30px', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
                 
                 {mensaje.texto && (
