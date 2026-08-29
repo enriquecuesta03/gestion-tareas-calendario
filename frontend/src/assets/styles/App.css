@@ -171,13 +171,13 @@ body {
   min-width: 280px;
 }
 
-/* Portátiles de pantalla estrecha (769px-1300px): las tres columnas ya no
+/* Portátiles de pantalla estrecha (769px-1700px): las tres columnas ya no
    caben en fila (260px de barra lateral + 60px de margen + 880px mínimos
    del tablero superan ese ancho, sobre todo con el escalado de Windows
    activado). En vez de forzarlas y que la última se corte, reutilizamos
    el mismo scroll horizontal que en móvil, con columnas más anchas
    pensadas para ratón en vez de para el dedo. */
-@media (min-width: 769px) and (max-width: 1300px) {
+@media (min-width: 769px) and (max-width: 1700px) {
   .kanban-board {
     display: flex;
     flex-wrap: nowrap;
@@ -196,7 +196,7 @@ body {
    desde el principio sin tener que descubrir el scroll a ciegas). Repetimos
    aquí su estilo completo porque el original vive dentro del media query
    de móvil (max-width: 768px) y no llegaría a aplicarse en este rango. */
-@media (min-width: 769px) and (max-width: 1300px) {
+@media (min-width: 769px) and (max-width: 1700px) {
   .mobile-swipe-hint {
     display: flex !important;
     align-items: center;
