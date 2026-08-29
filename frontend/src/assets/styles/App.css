@@ -144,6 +144,9 @@ body {
 /* Zona central donde se carga el contenido (el tablero, los gráficos, etc.) */
 .main-content {
   flex: 1;
+  min-width: 0; /* Sin esto, al ser hijo flex, crece para ajustarse a su contenido
+                   en vez de respetar el ancho real disponible, y el scroll horizontal
+                   del tablero (más abajo) nunca llega a activarse. */
   overflow-y: auto;
   padding: 30px;
   background-color: var(--bg-body);
@@ -166,6 +169,44 @@ body {
   padding: 15px;
   flex: 1;
   min-width: 280px;
+}
+
+/* Portátiles de pantalla estrecha (769px-1300px): las tres columnas ya no
+   caben en fila (260px de barra lateral + 60px de margen + 880px mínimos
+   del tablero superan ese ancho, sobre todo con el escalado de Windows
+   activado). En vez de forzarlas y que la última se corte, reutilizamos
+   el mismo scroll horizontal que en móvil, con columnas más anchas
+   pensadas para ratón en vez de para el dedo. */
+@media (min-width: 769px) and (max-width: 1300px) {
+  .kanban-board {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  .kanban-col {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
+}
+
+/* Reutilizamos el mismo aviso que ya existe para móvil (está colocado
+   ANTES del tablero, no dentro de la zona que se desplaza, así que se ve
+   desde el principio sin tener que descubrir el scroll a ciegas). Repetimos
+   aquí su estilo completo porque el original vive dentro del media query
+   de móvil (max-width: 768px) y no llegaría a aplicarse en este rango. */
+@media (min-width: 769px) and (max-width: 1300px) {
+  .mobile-swipe-hint {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 12px;
+    padding-left: 5px;
+  }
 }
 
 .col-title {

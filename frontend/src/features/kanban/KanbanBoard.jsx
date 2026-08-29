@@ -57,7 +57,7 @@ function KanbanBoard({
             
             {/* Aviso visual solo para móviles para que el usuario sepa que puede deslizar */}
             <div className="mobile-swipe-hint">
-                Desliza lateralmente para ver más estados
+                Desplázate lateralmente para ver más estados
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
             </div>
 
